@@ -1,1 +1,1 @@
-console.log("Preload chargé");
+console.log("PAUL preload prêt");

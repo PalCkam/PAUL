@@ -1,15 +1,106 @@
 <!DOCTYPE html>
-
-<html lang="fr">
-
+<html lang="fr" data-theme="dark">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PAUL</title>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>PAUL</title>
+	<link rel="preconnect" href="https://api.fontshare.com" />
+	<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet" />
+	<link rel="stylesheet" href="./style.css" />
 </head>
-
 <body>
-    <h1>PAUL démarre</h1>
-</body>
+	<div class="app-shell">
+		<header class="topbar">
+			<div class="brand">
+				<div class="brand-mark" aria-hidden="true">P</div>
+				<div>
+					<p class="eyebrow">Assistant personnel</p>
+					<h1>PAUL</h1>
+				</div>
+			</div>
 
+			<button id="themeToggle" class="icon-button" type="button" aria-label="Changer de thème">
+				☼
+			</button>
+		</header>
+
+		<main class="main-grid">
+			<section class="panel compact-panel" aria-labelledby="launchTitle">
+				<div class="panel-head">
+					<h2 id="launchTitle">Lancement</h2>
+				</div>
+
+				<div class="mode-switch" role="group" aria-label="Type d’utilisation">
+					<button id="textModeButton" class="mode-button is-active" type="button">
+						Texte
+					</button>
+
+					<button id="voiceModeButton" class="mode-button" type="button">
+						Vocal
+					</button>
+				</div>
+
+				<p id="launchHint" class="muted-text">
+					Choisis le type d’utilisation avant de lancer PAUL.
+				</p>
+
+				<button id="launchButton" class="primary-button" type="button">
+					Lancer PAUL
+				</button>
+			</section>
+
+			<section class="panel compact-panel" aria-labelledby="modTitle">
+				<div class="panel-head">
+					<h2 id="modTitle">Sélection du mod</h2>
+					<span id="activeModBadge" class="badge badge-listening">Jeu</span>
+				</div>
+
+				<div class="mod-grid" id="modGrid">
+					<button class="mod-card is-active" type="button" data-mod="game">
+						<span class="mod-name">Jeu</span>
+						<span class="mod-meta">Disponible en V1</span>
+					</button>
+
+					<button class="mod-card" type="button" data-mod="dev">
+						<span class="mod-name">Développement</span>
+						<span class="mod-meta">Bientôt disponible</span>
+					</button>
+
+					<button class="mod-card" type="button" data-mod="life">
+						<span class="mod-name">Personnel</span>
+						<span class="mod-meta">Bientôt disponible</span>
+					</button>
+				</div>
+			</section>
+
+			<section class="panel compact-panel" aria-labelledby="counterTitle">
+				<div class="panel-head">
+					<h2 id="counterTitle">Compteur</h2>
+				</div>
+
+				<div class="counter-box">
+					<p class="counter-value" id="quotaValue">1000</p>
+					<p id="quotaText" class="muted-text">0 requête utilisée sur 1000.</p>
+				</div>
+
+				<div class="quota-bar" aria-hidden="true">
+					<div id="quotaBarFill" class="quota-bar-fill"></div>
+				</div>
+			</section>
+
+			<section class="panel compact-panel history-panel" aria-labelledby="historyTitle">
+				<div class="panel-head">
+					<h2 id="historyTitle">Dernières utilisations</h2>
+					<button id="clearHistory" class="text-button" type="button">Vider</button>
+				</div>
+
+				<ul id="historyList" class="history-list" role="list">
+					<li class="history-empty">Aucune utilisation pour l’instant.</li>
+				</ul>
+			</section>
+		</main>
+	</div>
+
+	<script src="./renderer.js" defer></script>
+</body>
 </html>
