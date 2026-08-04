@@ -1,106 +1,212 @@
 <!DOCTYPE html>
 <html lang="fr" data-theme="dark">
 <head>
-	<meta charset="UTF-8" />
-	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-	<title>PAUL</title>
-	<link rel="preconnect" href="https://api.fontshare.com" />
-	<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet" />
-	<link rel="stylesheet" href="./style.css" />
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+    <title>PAUL</title>
+    <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-	<div class="app-shell">
-		<header class="topbar">
-			<div class="brand">
-				<div class="brand-mark" aria-hidden="true">P</div>
-				<div>
-					<p class="eyebrow">Assistant personnel</p>
-					<h1>PAUL</h1>
-				</div>
-			</div>
+    <a class="skip-link" href="#mainContent">Aller au contenu</a>
 
-			<button id="themeToggle" class="icon-button" type="button" aria-label="Changer de thème">
-				☼
-			</button>
-		</header>
+    <div class="app-shell">
+        <header class="topbar">
+            <div class="brand-block">
+                <p class="eyebrow">Assistant personnel</p>
+                <h1 class="app-title">PAUL</h1>
+                <p class="app-subtitle">Hub local de lancement</p>
+            </div>
 
-		<main class="main-grid">
-			<section class="panel compact-panel" aria-labelledby="launchTitle">
-				<div class="panel-head">
-					<h2 id="launchTitle">Lancement</h2>
-				</div>
+            <button
+                id="themeToggle"
+                class="theme-toggle"
+                type="button"
+                aria-label="Changer de thème"
+            >
+                ☼
+            </button>
+        </header>
 
-				<div class="mode-switch" role="group" aria-label="Type d’utilisation">
-					<button id="textModeButton" class="mode-button is-active" type="button">
-						Texte
-					</button>
+        <main id="mainContent" class="dashboard">
+            <section class="hero-panel">
+                <div class="hero-copy">
+                    <p class="panel-label">Lancement</p>
+                    <h2>Point de départ de PAUL</h2>
+                    <p class="hero-text">
+                        Sélectionne un mode, choisis un profil de jeu si besoin, puis lance l’assistant.
+                    </p>
+                </div>
 
-					<button id="voiceModeButton" class="mode-button" type="button">
-						Vocal
-					</button>
-				</div>
+                <div class="hero-actions">
+                    <div class="input-mode-switch" aria-label="Mode d’entrée">
+                        <button
+                            id="textModeButton"
+                            class="mode-button is-active"
+                            type="button"
+                        >
+                            Texte
+                        </button>
 
-				<p id="launchHint" class="muted-text">
-					Choisis le type d’utilisation avant de lancer PAUL.
-				</p>
+                        <button
+                            id="voiceModeButton"
+                            class="mode-button"
+                            type="button"
+                        >
+                            Vocal
+                        </button>
+                    </div>
 
-				<button id="launchButton" class="primary-button" type="button">
-					Lancer PAUL
-				</button>
-			</section>
+                    <button
+                        id="launchButton"
+                        class="launch-button"
+                        type="button"
+                    >
+                        Lancer PAUL
+                    </button>
 
-			<section class="panel compact-panel" aria-labelledby="modTitle">
-				<div class="panel-head">
-					<h2 id="modTitle">Sélection du mod</h2>
-					<span id="activeModBadge" class="badge badge-listening">Jeu</span>
-				</div>
+                    <p id="launchHint" class="launch-hint">
+                        Le mode texte est sélectionné avant lancement.
+                    </p>
+                </div>
+            </section>
 
-				<div class="mod-grid" id="modGrid">
-					<button class="mod-card is-active" type="button" data-mod="game">
-						<span class="mod-name">Jeu</span>
-						<span class="mod-meta">Disponible en V1</span>
-					</button>
+            <section class="status-grid">
+                <article class="status-card">
+                    <p class="panel-label">Mode actif</p>
+                    <div class="mod-switches">
+                        <button
+                            class="mod-button is-active"
+                            type="button"
+                            data-mod="game"
+                        >
+                            Jeu
+                        </button>
 
-					<button class="mod-card" type="button" data-mod="dev">
-						<span class="mod-name">Développement</span>
-						<span class="mod-meta">Bientôt disponible</span>
-					</button>
+                        <button
+                            class="mod-button"
+                            type="button"
+                            data-mod="dev"
+                        >
+                            Développement
+                        </button>
 
-					<button class="mod-card" type="button" data-mod="life">
-						<span class="mod-name">Personnel</span>
-						<span class="mod-meta">Bientôt disponible</span>
-					</button>
-				</div>
-			</section>
+                        <button
+                            class="mod-button"
+                            type="button"
+                            data-mod="life"
+                        >
+                            Personnel
+                        </button>
+                    </div>
 
-			<section class="panel compact-panel" aria-labelledby="counterTitle">
-				<div class="panel-head">
-					<h2 id="counterTitle">Compteur</h2>
-				</div>
+                    <p class="status-line">
+                        Actuel :
+                        <span id="activeModBadge" class="status-badge">Jeu</span>
+                    </p>
+                </article>
 
-				<div class="counter-box">
-					<p class="counter-value" id="quotaValue">1000</p>
-					<p id="quotaText" class="muted-text">0 requête utilisée sur 1000.</p>
-				</div>
+                <article class="status-card">
+                    <p class="panel-label">Quota mensuel</p>
+                    <p id="quotaValue" class="quota-value">1000</p>
+                    <p id="quotaText" class="quota-text">
+                        0 demande web utilisée sur 1000 · 0 lancement.
+                    </p>
 
-				<div class="quota-bar" aria-hidden="true">
-					<div id="quotaBarFill" class="quota-bar-fill"></div>
-				</div>
-			</section>
+                    <div class="quota-bar" aria-hidden="true">
+                        <div id="quotaBarFill" class="quota-bar-fill"></div>
+                    </div>
+                </article>
+            </section>
 
-			<section class="panel compact-panel history-panel" aria-labelledby="historyTitle">
-				<div class="panel-head">
-					<h2 id="historyTitle">Dernières utilisations</h2>
-					<button id="clearHistory" class="text-button" type="button">Vider</button>
-				</div>
+            <section
+                id="gameProfilesPanel"
+                class="panel-section"
+                aria-labelledby="gameProfilesTitle"
+            >
+                <div class="panel-header">
+                    <div>
+                        <p class="panel-label">Profils de jeu</p>
+                        <h2 id="gameProfilesTitle">Profils enregistrés</h2>
+                    </div>
 
-				<ul id="historyList" class="history-list" role="list">
-					<li class="history-empty">Aucune utilisation pour l’instant.</li>
-				</ul>
-			</section>
-		</main>
-	</div>
+                    <button
+                        id="newGameToggleButton"
+                        class="secondary-button"
+                        type="button"
+                    >
+                        Nouveau profil
+                    </button>
+                </div>
 
-	<script src="./renderer.js" defer></script>
+                <div
+                    id="newGameForm"
+                    class="new-game-form is-hidden"
+                >
+                    <div class="field-group">
+                        <label for="newGameInput">Nom du jeu</label>
+                        <input
+                            id="newGameInput"
+                            class="text-input"
+                            type="text"
+                            placeholder="Ex. Elden Ring"
+                        >
+                    </div>
+
+                    <button
+                        id="createGameButton"
+                        class="secondary-button"
+                        type="button"
+                    >
+                        Sauvegarder
+                    </button>
+                </div>
+
+                <p id="gameProfilesHint" class="panel-hint">
+                    Sélectionne un profil ou ajoute-en un nouveau.
+                </p>
+
+                <ul
+                    id="gameProfilesList"
+                    class="game-profiles-list"
+                    role="list"
+                >
+                    <li class="history-empty">Chargement des profils...</li>
+                </ul>
+            </section>
+
+            <section
+                class="panel-section"
+                aria-labelledby="historyTitle"
+            >
+                <div class="panel-header">
+                    <div>
+                        <p class="panel-label">Historique</p>
+                        <h2 id="historyTitle">Dernières utilisations</h2>
+                    </div>
+
+                    <button
+                        id="clearHistory"
+                        class="secondary-button"
+                        type="button"
+                    >
+                        Vider
+                    </button>
+                </div>
+
+                <ul
+                    id="historyList"
+                    class="history-list"
+                    role="list"
+                >
+                    <li class="history-empty">Aucune utilisation pour l’instant.</li>
+                </ul>
+            </section>
+        </main>
+    </div>
+
+    <script src="./renderer.js"></script>
 </body>
 </html>
