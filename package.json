@@ -1,0 +1,26 @@
+{
+  "name": "paul",
+  "version": "1.0.0",
+  "description": "Programme d'Assistance Utilisateur Local (Paul)",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "npm run build && electron ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PalCkam/PAUL.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/PalCkam/PAUL/issues"
+  },
+  "homepage": "https://github.com/PalCkam/PAUL#readme",
+  "devDependencies": {
+    "electron": "^43.2.0",
+    "typescript": "^5.9.3"
+  }
+}
