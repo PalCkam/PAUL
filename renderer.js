@@ -228,6 +228,10 @@ function selectGameProfile(gameName)
     {
         els.gameProfilesHint.textContent = `Profil sélectionné : ${selectedProfile.name}`;
     }
+    if (window.overlayApi && typeof window.overlayApi.setProfileName === "function")
+    {
+        window.overlayApi.setProfileName(selectedProfile.name);
+    }
 
     render();
 }
@@ -279,8 +283,15 @@ async function launchPaul()
             return;
         }
 
-        state.launchCount += 1;
-        state.history = Array.isArray(result.launchHistory) ? result.launchHistory : [];
+        if (!result || result.ok !== true)
+        {
+            els.launchHint.textContent = "Échec du lancement.";
+            return;
+        }
+
+        state.launchCount = result.usage?.launchCount ?? state.launchCount;
+        state.webRequests = result.usage?.webRequests ?? state.webRequests;
+        state.history     = Array.isArray(result.launchHistory) ? result.launchHistory : [];
         render();
     }
     catch
@@ -290,6 +301,31 @@ async function launchPaul()
     finally
     {
         els.launchButton.disabled = false;
+    }
+}
+
+async function loadUsage()
+{
+    if (!window.paulApi || typeof window.paulApi.getUsage !== "function")
+    {
+        return;
+    }
+
+    try
+    {
+        const result = await window.paulApi.getUsage();
+
+        if (result?.ok && result.usage)
+        {
+            state.webRequests = result.usage.webRequests ?? 0;
+            state.launchCount = result.usage.launchCount ?? 0;
+        }
+
+        render();
+    }
+    catch
+    {
+        // On peut afficher un hint si tu veux, mais ce n’est pas obligatoire.
     }
 }
 
@@ -556,4 +592,5 @@ document.documentElement.setAttribute("data-theme", state.theme);
 
 bindProfileEvents();
 loadProfiles();
+loadUsage();
 render();

@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="fr">
+<head>
+	<meta charset="utf-8">
+	<title>PAUL Overlay</title>
+
+	<style>
+		html,
+		body
+		{
+			margin:      0;
+			padding:     0;
+			width:       100vw;
+			height:      100vh;
+			background:  transparent;
+			overflow:    hidden;
+			font-family: Inter, system-ui, sans-serif;
+			color:       #f1efe9;
+		}
+
+		.overlay-root
+		{
+			position:       fixed;
+			inset:          0;
+			pointer-events: none;
+			background:     rgba(0, 0, 0, 0.15);
+		}
+
+		.overlay-sidebar
+		{
+			position:        absolute;
+			top:             0;
+			right:           0;
+			width:           300px;
+			height:          100%;
+			background:      rgba(12, 12, 12, 0.90);
+			backdrop-filter: blur(8px);
+			box-shadow:      0 0 20px rgba(0, 0, 0, 0.4);
+			border-left:     1px solid rgba(127, 127, 127, 0.3);
+			display:         flex;
+			flex-direction:  column;
+			padding:         16px;
+			gap:             12px;
+			pointer-events:  auto;
+			transition:      opacity 160ms ease, transform 160ms ease;
+		}
+
+		.overlay-sidebar.is-hidden
+		{
+			opacity:        0;
+			transform:      translateX(100%);
+			pointer-events: none;
+		}
+
+		.overlay-header
+		{
+			font-size:      0.9rem;
+			font-weight:    600;
+			letter-spacing: 0.06em;
+			text-transform: uppercase;
+			color:          #b8b4ab;
+		}
+
+		.overlay-profile
+		{
+			font-size:     1rem;
+			font-weight:   600;
+			margin-bottom: 4px;
+		}
+
+		.overlay-notes
+		{
+			flex:             1;
+			display:          flex;
+			flex-direction:   column;
+			gap:              8px;
+		}
+
+		.overlay-notes textarea
+		{
+			width:         100%;
+			height:        120px;
+			border-radius: 8px;
+			border:        1px solid rgba(127, 127, 127, 0.35);
+			background:    rgba(24, 24, 24, 0.95);
+			color:         #f1efe9;
+			padding:       8px;
+			resize:        none;
+			font-size:     0.95rem;
+		}
+
+		.overlay-chat-input
+		{
+			border-radius: 8px;
+			border:        1px solid rgba(127, 127, 127, 0.35);
+			background:    rgba(24, 24, 24, 0.95);
+			color:         #f1efe9;
+			padding:       8px;
+			font-size:     0.95rem;
+		}
+
+		.overlay-chat-input::placeholder
+		{
+			color: #8d887e;
+		}
+	</style>
+</head>
+
+<body>
+	<div class="overlay-root">
+		<aside class="overlay-sidebar is-hidden">
+			<div class="overlay-header">PAUL · Overlay</div>
+
+			<div class="overlay-profile" id="overlayProfileName">
+				Profil : Aucun
+			</div>
+
+			<section class="overlay-notes">
+				<label for="overlayNotes">Notes du profil</label>
+
+				<textarea
+					id="overlayNotes"
+					placeholder="Notes pour ce jeu... (pas encore sauvegardées)"
+				></textarea>
+			</section>
+
+			<section>
+				<label for="overlayChatInput">Discussion IA (à venir)</label>
+
+				<input
+					id="overlayChatInput"
+					class="overlay-chat-input"
+					type="text"
+					placeholder="Tape ici pour discuter avec PAUL plus tard..."
+					disabled
+				/>
+			</section>
+		</aside>
+	</div>
+
+	<script>
+		const profileNameEl = document.getElementById("overlayProfileName");
+		const notesEl       = document.getElementById("overlayNotes");
+		const sidebarEl     = document.querySelector(".overlay-sidebar");
+
+
+		const electron = require("electron");
+		const ipc      = electron.ipcRenderer;
+
+
+		ipc.on("overlay:updateNotes", (_event, payload) =>
+		{
+			if (payload.profileName)
+			{
+				profileNameEl.textContent = `Profil : ${payload.profileName}`;
+			}
+
+
+			if (typeof payload.notes === "string")
+			{
+				notesEl.value = payload.notes;
+			}
+		});
+
+
+		ipc.on("overlay:toggleSidebar", () =>
+		{
+			if (sidebarEl.classList.contains("is-hidden"))
+			{
+				sidebarEl.classList.remove("is-hidden");
+			}
+			else
+			{
+				sidebarEl.classList.add("is-hidden");
+			}
+		});
+	</script>
+</body>
+</html>

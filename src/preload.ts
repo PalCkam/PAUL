@@ -26,5 +26,15 @@ contextBridge.exposeInMainWorld("paulApi",
     deleteProfile(gameName: string)
     {
         return ipcRenderer.invoke("profiles:delete", gameName);
+    },
+
+    historyList()
+    {
+        return ipcRenderer.invoke("history:list");
+    },
+
+    getUsage()
+    {
+        return ipcRenderer.invoke("usage:get");
     }
 });
