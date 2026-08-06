@@ -145,4 +145,4 @@ vite.config.ts.timestamp-*
 release/
 release-pack/
 data/usage.json
-data\game-profiles.json
+data/game-profiles.json
