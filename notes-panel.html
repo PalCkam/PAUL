@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <title>PAUL Notes Panel</title>
+    <style>
+        html,
+        body
+        {
+            margin:      0;
+            padding:     0;
+            width:       100%;
+            height:      100%;
+            background:  rgba(12, 12, 12, 0.95);
+            font-family: Inter, system-ui, sans-serif;
+            color:       #f1efe9;
+            overflow:    hidden;
+        }
+
+
+        .panel-root
+        {
+            display:        flex;
+            flex-direction: column;
+            padding:        16px;
+            gap:            12px;
+            height:         100%;
+            box-sizing:     border-box;
+            overflow-y:     auto;
+        }
+
+
+        .panel-header
+        {
+            font-size:      0.9rem;
+            font-weight:    600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color:          #b8b4ab;
+            margin-bottom:  4px;
+        }
+
+
+        .panel-section-title
+        {
+            font-size:      0.8rem;
+            font-weight:    600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color:          #8d887e;
+            margin-bottom:  4px;
+        }
+
+
+        .panel-note
+        {
+            border-radius: 6px;
+            border:        1px solid rgba(127, 127, 127, 0.35);
+            padding:       10px;
+            background:    rgba(24, 24, 24, 1);
+            margin-bottom: 8px;
+        }
+
+
+        .panel-note-title
+        {
+            font-size:   0.95rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+
+        .panel-note-content
+        {
+            font-size: 0.85rem;
+            color:     #d1ccc2;
+            margin-bottom: 8px;
+        }
+
+
+        .panel-note-actions
+        {
+            display: flex;
+            gap: 6px;
+        }
+
+
+        button
+        {
+            border-radius: 4px;
+            border:        none;
+            padding:       6px 10px;
+            font-size:     0.8rem;
+            cursor:        pointer;
+            background:    #3498db;
+            color:         #f1efe9;
+        }
+
+
+        button:hover
+        {
+            background: #2980b9;
+        }
+
+
+        button.unpin
+        {
+            background: #e74c3c;
+        }
+
+
+        button.unpin:hover
+        {
+            background: #c0392b;
+        }
+    </style>
+</head>
+<body>
+    <div class="panel-root">
+        <div class="panel-header">PAUL · Notes</div>
+
+
+        <!-- Notes épinglées -->
+        <div>
+            <div class="panel-section-title">Épinglées</div>
+            <div id="pinnedNotesList"></div>
+        </div>
+
+
+        <!-- Autres notes -->
+        <div>
+            <div class="panel-section-title">Autres notes</div>
+            <div id="otherNotesList"></div>
+        </div>
+    </div>
+
+
+    <script>
+        const pinnedNotesList  = document.getElementById("pinnedNotesList");
+        const otherNotesList   = document.getElementById("otherNotesList");
+
+
+        // Notes de test (à remplacer par tes vraies données plus tard)
+        const pinnedNotes = [
+            {
+                title:   "Note épinglée 1",
+                content: "Contenu de la note épinglée 1."
+            }
+        ];
+
+
+        const otherNotes = [
+            {
+                title:   "Note de test",
+                content: "Ceci est une note de test depuis le panneau Notes."
+            },
+            {
+                title:   "Autre note",
+                content: "Une autre note non épinglée."
+            }
+        ];
+
+
+        function renderPinnedNotes()
+        {
+            pinnedNotesList.innerHTML = "";
+
+
+            if (pinnedNotes.length === 0)
+            {
+                pinnedNotesList.innerHTML = "<div style='font-size:0.85rem;color:#8d887e;'>Aucune note épinglée.</div>";
+                return;
+            }
+
+
+            pinnedNotes.forEach((note, index) =>
+            {
+                const noteEl = document.createElement("div");
+                noteEl.className = "panel-note";
+
+
+                const titleEl = document.createElement("div");
+                titleEl.className = "panel-note-title";
+                titleEl.textContent = note.title;
+
+
+                const contentEl = document.createElement("div");
+                contentEl.className = "panel-note-content";
+                contentEl.textContent = note.content;
+
+
+                const actionsEl = document.createElement("div");
+                actionsEl.className = "panel-note-actions";
+
+
+                const unpinButton = document.createElement("button");
+                unpinButton.className = "unpin";
+                unpinButton.textContent = "Désépingler";
+
+
+                unpinButton.addEventListener("click", () =>
+                {
+                    window.notesPanelApi.unpinNote();
+                    window.close(); // Fermer le panneau
+                });
+
+
+                actionsEl.appendChild(unpinButton);
+
+
+                noteEl.appendChild(titleEl);
+                noteEl.appendChild(contentEl);
+                noteEl.appendChild(actionsEl);
+
+
+                pinnedNotesList.appendChild(noteEl);
+            });
+        }
+
+
+        function renderOtherNotes()
+        {
+            otherNotesList.innerHTML = "";
+
+
+            if (otherNotes.length === 0)
+            {
+                otherNotesList.innerHTML = "<div style='font-size:0.85rem;color:#8d887e;'>Aucune autre note.</div>";
+                return;
+            }
+
+
+            otherNotes.forEach((note, index) =>
+            {
+                const noteEl = document.createElement("div");
+                noteEl.className = "panel-note";
+
+
+                const titleEl = document.createElement("div");
+                titleEl.className = "panel-note-title";
+                titleEl.textContent = note.title;
+
+
+                const contentEl = document.createElement("div");
+                contentEl.className = "panel-note-content";
+                contentEl.textContent = note.content;
+
+
+                const actionsEl = document.createElement("div");
+                actionsEl.className = "panel-note-actions";
+
+
+                const pinButton = document.createElement("button");
+                pinButton.textContent = "Épingler";
+
+
+                pinButton.addEventListener("click", async () =>
+                {
+                    await window.notesPanelApi.pinNote("Minecraft principal", note);
+                    window.close(); // Fermer le panneau
+                });
+
+
+                actionsEl.appendChild(pinButton);
+
+
+                noteEl.appendChild(titleEl);
+                noteEl.appendChild(contentEl);
+                noteEl.appendChild(actionsEl);
+
+
+                otherNotesList.appendChild(noteEl);
+            });
+        }
+
+
+        renderPinnedNotes();
+        renderOtherNotes();
+    </script>
+</body>
+</html>

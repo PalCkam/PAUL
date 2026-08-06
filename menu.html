@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <title>PAUL Menu</title>
+    <style>
+        html,
+        body
+        {
+            margin:      0;
+            padding:     0;
+            width:       100%;
+            height:      100%;
+            background:  transparent;
+            font-family: Inter, system-ui, sans-serif;
+            color:       #f1efe9;
+            overflow:    hidden;
+        }
+
+
+        .menu-root
+        {
+            display:        flex;
+            flex-direction: column;
+            gap:            8px;
+            padding:        12px;
+            border-radius:  8px;
+            background:     rgba(12, 12, 12, 0.92);
+            border:         1px solid rgba(127, 127, 127, 0.35);
+            height:         100%;
+            box-sizing:     border-box;
+        }
+
+
+        .menu-header
+        {
+            font-size:      0.8rem;
+            font-weight:    600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color:          #b8b4ab;
+            margin-bottom:  2px;
+        }
+
+
+        .menu-button
+        {
+            border-radius: 6px;
+            border:        1px solid rgba(127, 127, 127, 0.35);
+            background:    rgba(24, 24, 24, 1);
+            color:         #f1efe9;
+            padding:       8px 10px;
+            font-size:     0.9rem;
+            cursor:        pointer;
+            text-align:    left;
+        }
+
+
+        .menu-button:hover
+        {
+            background: rgba(34, 34, 34, 1);
+        }
+    </style>
+</head>
+<body>
+    <div class="menu-root">
+        <div class="menu-header">PAUL</div>
+
+
+        <button class="menu-button" id="openNotesButton">
+            Notes
+        </button>
+
+
+        <!-- Autres modules plus tard -->
+    </div>
+
+
+    <script>
+        const openNotesButton = document.getElementById("openNotesButton");
+
+
+        openNotesButton.addEventListener("click", async () =>
+        {
+            await window.menuApi.openNotesPanel();
+        });
+    </script>
+</body>
+</html>

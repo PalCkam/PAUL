@@ -1,16 +1,16 @@
 import { contextBridge, ipcRenderer } from "electron";
 
 
-contextBridge.exposeInMainWorld("overlayApi",
+// Pas d'API exposée ici, le désépinglage se fait depuis le panneau Notes
+
+
+ipcRenderer.on("overlay:pinNote", (_event, payload) =>
 {
-	setNotes(notes: string)
-	{
-		return ipcRenderer.invoke("overlay:setNotes", notes);
-	},
+    window.postMessage({ type: "overlay:pinNote", payload }, "*");
+});
 
 
-	setProfileName(profileName: string)
-	{
-		return ipcRenderer.invoke("overlay:setProfileName", profileName);
-	}
+ipcRenderer.on("overlay:unpinNote", () =>
+{
+    window.postMessage({ type: "overlay:unpinNote" }, "*");
 });

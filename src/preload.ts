@@ -36,5 +36,30 @@ contextBridge.exposeInMainWorld("paulApi",
     getUsage()
     {
         return ipcRenderer.invoke("usage:get");
+    },
+
+    notesGetProfiles()
+    {
+        return ipcRenderer.invoke("notes:getProfiles");
+    },
+
+    notesGetNoteSetsForProfile(profileId: string)
+    {
+        return ipcRenderer.invoke("notes:getNoteSetsForProfile", profileId);
+    },
+
+    notesSetCurrentProfile(profileId: string)
+    {
+        return ipcRenderer.invoke("notes:setCurrentProfile", profileId);
+    },
+
+    notesSetCurrentNoteSet(noteSetId: string)
+    {
+        return ipcRenderer.invoke("notes:setCurrentNoteSet", noteSetId);
+    },
+
+    notesGetOverlayNotes()
+    {
+        return ipcRenderer.invoke("notes:getOverlayNotes");
     }
 });
