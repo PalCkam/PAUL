@@ -217,6 +217,8 @@ async function deleteGameProfile(gameName)
 
 function selectGameProfile(gameName)
 {
+    console.log("=== selectGameProfile APPELÉ avec :", gameName);
+    
     const selectedProfile = state.gameProfiles.find((profile) =>
     {
         return profile.name === gameName;
@@ -227,7 +229,13 @@ function selectGameProfile(gameName)
     if (selectedProfile)
     {
         els.gameProfilesHint.textContent = `Profil sélectionné : ${selectedProfile.name}`;
+
+        if (window.paulApi && typeof window.paulApi.notesSetCurrentProfile === "function")
+        {
+            window.paulApi.notesSetCurrentProfile(selectedProfile.name);
+        }
     }
+
     if (window.overlayApi && typeof window.overlayApi.setProfileName === "function")
     {
         window.overlayApi.setProfileName(selectedProfile.name);

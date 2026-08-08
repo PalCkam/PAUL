@@ -12,5 +12,17 @@ contextBridge.exposeInMainWorld("notesPanelApi",
     unpinNote()
     {
         return ipcRenderer.invoke("notes:unpinNote");
+    },
+
+
+    getAllNotes()
+    {
+        return ipcRenderer.invoke("notes:getAllNotes");
+    },
+
+
+    createNote()
+    {
+        return ipcRenderer.invoke("notes:createNote");
     }
 });

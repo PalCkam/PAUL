@@ -119,7 +119,9 @@
     <div class="panel-root">
         <div class="panel-header">PAUL · Notes</div>
 
-
+        <!-- Bouton Créer une note -->
+        <button id="createNoteButton" style="margin-bottom: 8px;">+ Nouvelle note</button>
+        
         <!-- Notes épinglées -->
         <div>
             <div class="panel-section-title">Épinglées</div>
@@ -136,146 +138,159 @@
 
 
     <script>
-        const pinnedNotesList  = document.getElementById("pinnedNotesList");
-        const otherNotesList   = document.getElementById("otherNotesList");
-
-
-        // Notes de test (à remplacer par tes vraies données plus tard)
-        const pinnedNotes = [
-            {
-                title:   "Note épinglée 1",
-                content: "Contenu de la note épinglée 1."
-            }
-        ];
-
-
-        const otherNotes = [
-            {
-                title:   "Note de test",
-                content: "Ceci est une note de test depuis le panneau Notes."
-            },
-            {
-                title:   "Autre note",
-                content: "Une autre note non épinglée."
-            }
-        ];
-
-
-        function renderPinnedNotes()
+        document.addEventListener("DOMContentLoaded", () =>
         {
-            pinnedNotesList.innerHTML = "";
+            const pinnedNotesList  = document.getElementById("pinnedNotesList");
+            const otherNotesList   = document.getElementById("otherNotesList");
+            const createNoteButton = document.getElementById("createNoteButton");
 
 
-            if (pinnedNotes.length === 0)
+            async function loadNotes()
             {
-                pinnedNotesList.innerHTML = "<div style='font-size:0.85rem;color:#8d887e;'>Aucune note épinglée.</div>";
-                return;
+                const data = await window.notesPanelApi.getAllNotes();
+
+
+                renderPinnedNotes(data.pinnedNotes);
+                renderOtherNotes(data.otherNotes);
             }
 
 
-            pinnedNotes.forEach((note, index) =>
+            createNoteButton.addEventListener("click", async () =>
             {
-                const noteEl = document.createElement("div");
-                noteEl.className = "panel-note";
-
-
-                const titleEl = document.createElement("div");
-                titleEl.className = "panel-note-title";
-                titleEl.textContent = note.title;
-
-
-                const contentEl = document.createElement("div");
-                contentEl.className = "panel-note-content";
-                contentEl.textContent = note.content;
-
-
-                const actionsEl = document.createElement("div");
-                actionsEl.className = "panel-note-actions";
-
-
-                const unpinButton = document.createElement("button");
-                unpinButton.className = "unpin";
-                unpinButton.textContent = "Désépingler";
-
-
-                unpinButton.addEventListener("click", () =>
-                {
-                    window.notesPanelApi.unpinNote();
-                    window.close(); // Fermer le panneau
-                });
-
-
-                actionsEl.appendChild(unpinButton);
-
-
-                noteEl.appendChild(titleEl);
-                noteEl.appendChild(contentEl);
-                noteEl.appendChild(actionsEl);
-
-
-                pinnedNotesList.appendChild(noteEl);
+                console.log("Création d'une note...");
+                const result = await window.notesPanelApi.createNote();
+                console.log("Résultat :", result);
+                loadNotes();
             });
-        }
 
 
-        function renderOtherNotes()
-        {
-            otherNotesList.innerHTML = "";
 
-
-            if (otherNotes.length === 0)
+            function renderPinnedNotes(pinnedNotes)
             {
-                otherNotesList.innerHTML = "<div style='font-size:0.85rem;color:#8d887e;'>Aucune autre note.</div>";
-                return;
+                pinnedNotesList.innerHTML = "";
+
+
+                if (pinnedNotes.length === 0)
+                {
+                    pinnedNotesList.innerHTML = "<div style='font-size:0.85rem;color:#8d887e;'>Aucune note épinglée.</div>";
+                    return;
+                }
+
+
+                pinnedNotes.forEach((note) =>
+                {
+                    const noteEl = document.createElement("div");
+                    noteEl.className = "panel-note";
+
+
+                    const titleEl = document.createElement("div");
+                    titleEl.className = "panel-note-title";
+                    titleEl.textContent = note.title;
+
+
+                    const contentEl = document.createElement("div");
+                    contentEl.className = "panel-note-content";
+                    contentEl.textContent = note.content;
+
+
+                    const actionsEl = document.createElement("div");
+                    actionsEl.className = "panel-note-actions";
+
+
+                    const unpinButton = document.createElement("button");
+                    unpinButton.className = "unpin";
+                    unpinButton.textContent = "Désépingler";
+
+
+                    unpinButton.addEventListener("click", async () =>
+                    {
+                        await window.notesPanelApi.unpinNote();
+                        window.close();
+                    });
+
+
+                    actionsEl.appendChild(unpinButton);
+
+
+                    noteEl.appendChild(titleEl);
+                    noteEl.appendChild(contentEl);
+                    noteEl.appendChild(actionsEl);
+
+
+                    pinnedNotesList.appendChild(noteEl);
+                });
             }
 
 
-            otherNotes.forEach((note, index) =>
+
+            function renderOtherNotes(otherNotes)
             {
-                const noteEl = document.createElement("div");
-                noteEl.className = "panel-note";
+                otherNotesList.innerHTML = "";
 
-
-                const titleEl = document.createElement("div");
-                titleEl.className = "panel-note-title";
-                titleEl.textContent = note.title;
-
-
-                const contentEl = document.createElement("div");
-                contentEl.className = "panel-note-content";
-                contentEl.textContent = note.content;
-
-
-                const actionsEl = document.createElement("div");
-                actionsEl.className = "panel-note-actions";
-
-
-                const pinButton = document.createElement("button");
-                pinButton.textContent = "Épingler";
-
-
-                pinButton.addEventListener("click", async () =>
+                if (otherNotes.length === 0)
                 {
-                    await window.notesPanelApi.pinNote("Minecraft principal", note);
-                    window.close(); // Fermer le panneau
+                    otherNotesList.innerHTML = "<div style='font-size:0.85rem;color:#8d887e;'>Aucune autre note.</div>";
+                    return;
+                }
+
+                otherNotes.forEach((note) =>
+                {
+                    const noteEl = document.createElement("div");
+                    noteEl.className = "panel-note";
+
+                    const titleEl = document.createElement("input");
+                    titleEl.className = "panel-note-title";
+                    titleEl.value = note.title;
+                    titleEl.style.width = "100%";
+                    titleEl.style.marginBottom = "4px";
+
+                    const contentEl = document.createElement("textarea");
+                    contentEl.className = "panel-note-content";
+                    contentEl.value = note.content;
+                    contentEl.style.width = "100%";
+                    contentEl.style.minHeight = "60px";
+                    contentEl.style.marginBottom = "8px";
+
+                    const actionsEl = document.createElement("div");
+                    actionsEl.className = "panel-note-actions";
+
+                    const pinButton = document.createElement("button");
+                    pinButton.textContent = "Épingler";
+
+                    const saveButton = document.createElement("button");
+                    saveButton.textContent = "Sauvegarder";
+
+                    saveButton.addEventListener("click", async () =>
+                    {
+                        await window.notesPanelApi.saveNote(note, {
+                            title: titleEl.value,
+                            content: contentEl.value
+                        });
+                        loadNotes();
+                    });
+
+                    pinButton.addEventListener("click", async () =>
+                    {
+                        await window.notesPanelApi.pinNote("Minecraft principal", {
+                            title: titleEl.value,
+                            content: contentEl.value
+                        });
+                        window.close();
+                    });
+
+                    actionsEl.appendChild(saveButton);
+                    actionsEl.appendChild(pinButton);
+
+                    noteEl.appendChild(titleEl);
+                    noteEl.appendChild(contentEl);
+                    noteEl.appendChild(actionsEl);
+
+                    otherNotesList.appendChild(noteEl);
                 });
+            }
 
-
-                actionsEl.appendChild(pinButton);
-
-
-                noteEl.appendChild(titleEl);
-                noteEl.appendChild(contentEl);
-                noteEl.appendChild(actionsEl);
-
-
-                otherNotesList.appendChild(noteEl);
-            });
-        }
-
-
-        renderPinnedNotes();
-        renderOtherNotes();
+            loadNotes();
+        });
     </script>
 </body>
 </html>

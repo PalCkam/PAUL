@@ -61,5 +61,10 @@ contextBridge.exposeInMainWorld("paulApi",
     notesGetOverlayNotes()
     {
         return ipcRenderer.invoke("notes:getOverlayNotes");
+    },
+
+    saveNote(oldNote: { title: string; content: string }, newNote: { title: string; content: string })
+    {
+        return ipcRenderer.invoke("notes:saveNote", oldNote, newNote);
     }
 });

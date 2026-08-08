@@ -1,0 +1,38 @@
+{
+  "profiles": [
+    {
+      "id": "Minecraft",
+      "steamProfileId": null,
+      "gameName": "Minecraft",
+      "displayName": "Minecraft",
+      "noteSets": [
+        {
+          "id": "noteset_Minecraft_default",
+          "name": "Notes par défaut",
+          "active": true,
+          "notes": [
+            {
+              "id": "note_1786212861478",
+              "title": "Nouvelle note",
+              "content": "",
+              "active": true,
+              "createdAt": "2026-08-08T18:14:21.478Z",
+              "updatedAt": "2026-08-08T18:14:21.478Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "steamProfileId": null,
+      "noteSets": [
+        {
+          "id": "noteset_undefined_default",
+          "name": "Notes par défaut",
+          "active": true,
+          "notes": []
+        }
+      ]
+    }
+  ]
+}
