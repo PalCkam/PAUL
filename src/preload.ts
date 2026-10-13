@@ -1,10 +1,8 @@
 import { contextBridge, ipcRenderer } from "electron";
 
-type LaunchPayload =
-{
-    inputMode: "text" | "voice";
-    mod:       "game" | "dev" | "life";
-};
+import type { LaunchPayload } from "./types";
+
+
 
 contextBridge.exposeInMainWorld("paulApi",
 {
@@ -28,43 +26,23 @@ contextBridge.exposeInMainWorld("paulApi",
         return ipcRenderer.invoke("profiles:delete", gameName);
     },
 
+    selectProfile(gameName: string)
+    {
+        return ipcRenderer.invoke("profiles:select", gameName);
+    },
+
     historyList()
     {
         return ipcRenderer.invoke("history:list");
     },
 
+    clearHistory()
+    {
+        return ipcRenderer.invoke("history:clear");
+    },
+
     getUsage()
     {
         return ipcRenderer.invoke("usage:get");
-    },
-
-    notesGetProfiles()
-    {
-        return ipcRenderer.invoke("notes:getProfiles");
-    },
-
-    notesGetNoteSetsForProfile(profileId: string)
-    {
-        return ipcRenderer.invoke("notes:getNoteSetsForProfile", profileId);
-    },
-
-    notesSetCurrentProfile(profileId: string)
-    {
-        return ipcRenderer.invoke("notes:setCurrentProfile", profileId);
-    },
-
-    notesSetCurrentNoteSet(noteSetId: string)
-    {
-        return ipcRenderer.invoke("notes:setCurrentNoteSet", noteSetId);
-    },
-
-    notesGetOverlayNotes()
-    {
-        return ipcRenderer.invoke("notes:getOverlayNotes");
-    },
-
-    saveNote(oldNote: { title: string; content: string }, newNote: { title: string; content: string })
-    {
-        return ipcRenderer.invoke("notes:saveNote", oldNote, newNote);
     }
 });

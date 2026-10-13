@@ -9,7 +9,8 @@ const state =
     theme:         "dark",
     gameProfiles:  [],
     selectedGame:  null,
-    isNewGameOpen: false
+    isNewGameOpen: false,
+    hasLaunched:   false
 };
 
 const modMap =
@@ -57,28 +58,14 @@ const els =
     modButtons:           Array.from(document.querySelectorAll("[data-mod]"))
 };
 
-function addHistory(result)
+function escapeHtml(value)
 {
-    const launchedDate = new Date(result.launchedAt);
-    const time         = launchedDate.toLocaleTimeString("fr-FR",
-    {
-        hour:   "2-digit",
-        minute: "2-digit"
-    });
-
-    const profileLabel = state.activeMod === "game" && state.selectedGame
-        ? state.selectedGame.name
-        : modMap[state.activeMod].label;
-
-    state.history.unshift(
-    {
-        mode:    state.inputMode === "voice" ? "Vocal" : "Texte",
-        mod:     modMap[state.activeMod].label,
-        time,
-        profile: profileLabel
-    });
-
-    state.history = state.history.slice(0, 10);
+    return String(value)
+        .replace(/&/g,  "&amp;")
+        .replace(/</g,  "&lt;")
+        .replace(/>/g,  "&gt;")
+        .replace(/"/g,  "&quot;")
+        .replace(/'/g,  "&#39;");
 }
 
 function setInputMode(mode)
@@ -217,8 +204,6 @@ async function deleteGameProfile(gameName)
 
 function selectGameProfile(gameName)
 {
-    console.log("=== selectGameProfile APPELÉ avec :", gameName);
-    
     const selectedProfile = state.gameProfiles.find((profile) =>
     {
         return profile.name === gameName;
@@ -230,15 +215,10 @@ function selectGameProfile(gameName)
     {
         els.gameProfilesHint.textContent = `Profil sélectionné : ${selectedProfile.name}`;
 
-        if (window.paulApi && typeof window.paulApi.notesSetCurrentProfile === "function")
+        if (window.paulApi && typeof window.paulApi.selectProfile === "function")
         {
-            window.paulApi.notesSetCurrentProfile(selectedProfile.name);
+            window.paulApi.selectProfile(selectedProfile.name);
         }
-    }
-
-    if (window.overlayApi && typeof window.overlayApi.setProfileName === "function")
-    {
-        window.overlayApi.setProfileName(selectedProfile.name);
     }
 
     render();
@@ -246,6 +226,11 @@ function selectGameProfile(gameName)
 
 function canLaunch()
 {
+    if (!modMap[state.activeMod].available)
+    {
+        return false;
+    }
+
     if (state.activeMod !== "game")
     {
         return true;
@@ -287,16 +272,11 @@ async function launchPaul()
 
         if (!result || result.ok !== true)
         {
-            els.launchHint.textContent = "Échec du lancement.";
+            els.launchHint.textContent = result?.message || "Échec du lancement.";
             return;
         }
 
-        if (!result || result.ok !== true)
-        {
-            els.launchHint.textContent = "Échec du lancement.";
-            return;
-        }
-
+        state.hasLaunched = true;
         state.launchCount = result.usage?.launchCount ?? state.launchCount;
         state.webRequests = result.usage?.webRequests ?? state.webRequests;
         state.history     = Array.isArray(result.launchHistory) ? result.launchHistory : [];
@@ -308,7 +288,7 @@ async function launchPaul()
     }
     finally
     {
-        els.launchButton.disabled = false;
+        els.launchButton.disabled = !canLaunch();
     }
 }
 
@@ -337,10 +317,35 @@ async function loadUsage()
     }
 }
 
-function clearHistory()
+async function loadHistory()
+{
+    if (!window.paulApi || typeof window.paulApi.historyList !== "function")
+    {
+        return;
+    }
+
+    try
+    {
+        const result = await window.paulApi.historyList();
+
+        state.history = Array.isArray(result?.history) ? result.history : [];
+
+        render();
+    }
+    catch
+    {
+    }
+}
+
+async function clearHistory()
 {
     state.history = [];
     render();
+
+    if (window.paulApi && typeof window.paulApi.clearHistory === "function")
+    {
+        await window.paulApi.clearHistory();
+    }
 }
 
 function toggleTheme()
@@ -396,22 +401,21 @@ function renderGameProfiles()
     els.gameProfilesList.innerHTML = state.gameProfiles
         .map((profile) =>
         {
-            const isActive        = state.selectedGame && state.selectedGame.name === profile.name;
-            const folderLabel     = profile.folderPath ? profile.folderPath : "Aucun dossier sélectionné";
-            const buttonLabel     = isActive ? "Sélectionné" : "Choisir";
+            const isActive    = state.selectedGame && state.selectedGame.name === profile.name;
+            const buttonLabel = isActive ? "Sélectionné" : "Choisir";
+            const safeName    = escapeHtml(profile.name);
 
             return `
                 <li class="game-profile-item">
                     <div class="game-profile-main">
-                        <span class="game-profile-name">${profile.name}</span>
-                        <span class="game-profile-path">${folderLabel}</span>
+                        <span class="game-profile-name">${safeName}</span>
                     </div>
 
                     <div class="game-profile-actions">
                         <button
                             class="game-profile-button ${isActive ? "is-active" : ""}"
                             type="button"
-                            data-game-profile="${profile.name}"
+                            data-game-profile="${safeName}"
                         >
                             ${buttonLabel}
                         </button>
@@ -419,7 +423,7 @@ function renderGameProfiles()
                         <button
                             class="game-profile-delete-button"
                             type="button"
-                            data-delete-game-profile="${profile.name}"
+                            data-delete-game-profile="${safeName}"
                         >
                             Supprimer
                         </button>
@@ -459,7 +463,7 @@ function renderHistory()
                     ? "Développement"
                     : "Personnel";
 
-            const profileLabel = item.gameName ?? "Aucun profil";
+            const profileLabel = escapeHtml(item.gameName ?? "Aucun profil");
 
             const launchedDate = new Date(item.launchedAt);
             const timeLabel = Number.isNaN(launchedDate.getTime())
@@ -482,6 +486,20 @@ function renderHistory()
 
 function renderLaunchState()
 {
+    els.launchButton.disabled = !canLaunch();
+
+    if (!modMap[state.activeMod].available)
+    {
+        els.launchHint.textContent = `${modMap[state.activeMod].label} : ${modMap[state.activeMod].description.toLowerCase()}.`;
+        return;
+    }
+
+    if (state.hasLaunched && state.activeMod === "game" && state.selectedGame)
+    {
+        els.launchHint.textContent = `PAUL est lancé (${state.selectedGame.name}). Appuie sur F4 en jeu pour afficher les modules.`;
+        return;
+    }
+
     if (state.activeMod === "game" && !state.selectedGame)
     {
         els.launchHint.textContent = "Sélectionne un profil de jeu avant le lancement.";
@@ -601,4 +619,5 @@ document.documentElement.setAttribute("data-theme", state.theme);
 bindProfileEvents();
 loadProfiles();
 loadUsage();
+loadHistory();
 render();

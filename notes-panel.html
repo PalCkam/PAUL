@@ -2,7 +2,9 @@
 <html lang="fr">
 <head>
     <meta charset="utf-8">
-    <title>PAUL Notes Panel</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'self'">
+    <title>PAUL Notes</title>
+
     <style>
         html,
         body
@@ -30,6 +32,15 @@
         }
 
 
+        .panel-top
+        {
+            display:         flex;
+            justify-content: space-between;
+            align-items:     flex-start;
+            gap:             8px;
+        }
+
+
         .panel-header
         {
             font-size:      0.9rem;
@@ -37,7 +48,14 @@
             letter-spacing: 0.06em;
             text-transform: uppercase;
             color:          #b8b4ab;
-            margin-bottom:  4px;
+        }
+
+
+        .panel-profile
+        {
+            margin-top: 2px;
+            font-size:  0.8rem;
+            color:      #8d887e;
         }
 
 
@@ -48,17 +66,47 @@
             letter-spacing: 0.06em;
             text-transform: uppercase;
             color:          #8d887e;
-            margin-bottom:  4px;
+            margin-bottom:  6px;
+        }
+
+
+        .panel-empty
+        {
+            font-size: 0.85rem;
+            color:     #8d887e;
         }
 
 
         .panel-note
         {
-            border-radius: 6px;
-            border:        1px solid rgba(127, 127, 127, 0.35);
-            padding:       10px;
-            background:    rgba(24, 24, 24, 1);
-            margin-bottom: 8px;
+            display:        flex;
+            flex-direction: column;
+            gap:            6px;
+            border-radius:  6px;
+            border:         1px solid rgba(127, 127, 127, 0.35);
+            padding:        10px;
+            background:     rgba(24, 24, 24, 1);
+            margin-bottom:  8px;
+        }
+
+
+        .panel-note.is-pinned
+        {
+            border-color: rgba(52, 152, 219, 0.7);
+        }
+
+
+        .panel-note-title,
+        .panel-note-content
+        {
+            width:         100%;
+            box-sizing:    border-box;
+            border-radius: 4px;
+            border:        1px solid transparent;
+            background:    transparent;
+            color:         #f1efe9;
+            font-family:   inherit;
+            padding:       4px 6px;
         }
 
 
@@ -66,22 +114,31 @@
         {
             font-size:   0.95rem;
             font-weight: 600;
-            margin-bottom: 4px;
         }
 
 
         .panel-note-content
         {
-            font-size: 0.85rem;
-            color:     #d1ccc2;
-            margin-bottom: 8px;
+            min-height: 70px;
+            font-size:  0.85rem;
+            color:      #d1ccc2;
+            resize:     vertical;
+        }
+
+
+        .panel-note-title:focus,
+        .panel-note-content:focus
+        {
+            outline:      none;
+            border-color: rgba(52, 152, 219, 0.7);
+            background:   rgba(0, 0, 0, 0.35);
         }
 
 
         .panel-note-actions
         {
             display: flex;
-            gap: 6px;
+            gap:     6px;
         }
 
 
@@ -90,6 +147,7 @@
             border-radius: 4px;
             border:        none;
             padding:       6px 10px;
+            font-family:   inherit;
             font-size:     0.8rem;
             cursor:        pointer;
             background:    #3498db;
@@ -97,200 +155,69 @@
         }
 
 
-        button:hover
+        button:hover:not(:disabled)
         {
             background: #2980b9;
         }
 
 
-        button.unpin
+        button:disabled
+        {
+            opacity: 0.5;
+            cursor:  default;
+        }
+
+
+        button.secondary
+        {
+            background: rgba(127, 127, 127, 0.3);
+        }
+
+
+        button.secondary:hover:not(:disabled)
+        {
+            background: rgba(127, 127, 127, 0.5);
+        }
+
+
+        button.danger
         {
             background: #e74c3c;
         }
 
 
-        button.unpin:hover
+        button.danger:hover:not(:disabled)
         {
             background: #c0392b;
         }
     </style>
 </head>
+
+
 <body>
     <div class="panel-root">
-        <div class="panel-header">PAUL · Notes</div>
+        <div class="panel-top">
+            <div>
+                <div class="panel-header">PAUL · Notes</div>
+                <div id="profileName" class="panel-profile"></div>
+            </div>
 
-        <!-- Bouton Créer une note -->
-        <button id="createNoteButton" style="margin-bottom: 8px;">+ Nouvelle note</button>
-        
-        <!-- Notes épinglées -->
+            <button id="closeButton" class="secondary" type="button" aria-label="Fermer le panneau">✕</button>
+        </div>
+
+        <button id="createNoteButton" type="button">+ Nouvelle note</button>
+
         <div>
             <div class="panel-section-title">Épinglées</div>
             <div id="pinnedNotesList"></div>
         </div>
 
-
-        <!-- Autres notes -->
         <div>
             <div class="panel-section-title">Autres notes</div>
             <div id="otherNotesList"></div>
         </div>
     </div>
 
-
-    <script>
-        document.addEventListener("DOMContentLoaded", () =>
-        {
-            const pinnedNotesList  = document.getElementById("pinnedNotesList");
-            const otherNotesList   = document.getElementById("otherNotesList");
-            const createNoteButton = document.getElementById("createNoteButton");
-
-
-            async function loadNotes()
-            {
-                const data = await window.notesPanelApi.getAllNotes();
-
-
-                renderPinnedNotes(data.pinnedNotes);
-                renderOtherNotes(data.otherNotes);
-            }
-
-
-            createNoteButton.addEventListener("click", async () =>
-            {
-                console.log("Création d'une note...");
-                const result = await window.notesPanelApi.createNote();
-                console.log("Résultat :", result);
-                loadNotes();
-            });
-
-
-
-            function renderPinnedNotes(pinnedNotes)
-            {
-                pinnedNotesList.innerHTML = "";
-
-
-                if (pinnedNotes.length === 0)
-                {
-                    pinnedNotesList.innerHTML = "<div style='font-size:0.85rem;color:#8d887e;'>Aucune note épinglée.</div>";
-                    return;
-                }
-
-
-                pinnedNotes.forEach((note) =>
-                {
-                    const noteEl = document.createElement("div");
-                    noteEl.className = "panel-note";
-
-
-                    const titleEl = document.createElement("div");
-                    titleEl.className = "panel-note-title";
-                    titleEl.textContent = note.title;
-
-
-                    const contentEl = document.createElement("div");
-                    contentEl.className = "panel-note-content";
-                    contentEl.textContent = note.content;
-
-
-                    const actionsEl = document.createElement("div");
-                    actionsEl.className = "panel-note-actions";
-
-
-                    const unpinButton = document.createElement("button");
-                    unpinButton.className = "unpin";
-                    unpinButton.textContent = "Désépingler";
-
-
-                    unpinButton.addEventListener("click", async () =>
-                    {
-                        await window.notesPanelApi.unpinNote();
-                        window.close();
-                    });
-
-
-                    actionsEl.appendChild(unpinButton);
-
-
-                    noteEl.appendChild(titleEl);
-                    noteEl.appendChild(contentEl);
-                    noteEl.appendChild(actionsEl);
-
-
-                    pinnedNotesList.appendChild(noteEl);
-                });
-            }
-
-
-
-            function renderOtherNotes(otherNotes)
-            {
-                otherNotesList.innerHTML = "";
-
-                if (otherNotes.length === 0)
-                {
-                    otherNotesList.innerHTML = "<div style='font-size:0.85rem;color:#8d887e;'>Aucune autre note.</div>";
-                    return;
-                }
-
-                otherNotes.forEach((note) =>
-                {
-                    const noteEl = document.createElement("div");
-                    noteEl.className = "panel-note";
-
-                    const titleEl = document.createElement("input");
-                    titleEl.className = "panel-note-title";
-                    titleEl.value = note.title;
-                    titleEl.style.width = "100%";
-                    titleEl.style.marginBottom = "4px";
-
-                    const contentEl = document.createElement("textarea");
-                    contentEl.className = "panel-note-content";
-                    contentEl.value = note.content;
-                    contentEl.style.width = "100%";
-                    contentEl.style.minHeight = "60px";
-                    contentEl.style.marginBottom = "8px";
-
-                    const actionsEl = document.createElement("div");
-                    actionsEl.className = "panel-note-actions";
-
-                    const pinButton = document.createElement("button");
-                    pinButton.textContent = "Épingler";
-
-                    const saveButton = document.createElement("button");
-                    saveButton.textContent = "Sauvegarder";
-
-                    saveButton.addEventListener("click", async () =>
-                    {
-                        await window.notesPanelApi.saveNote(note, {
-                            title: titleEl.value,
-                            content: contentEl.value
-                        });
-                        loadNotes();
-                    });
-
-                    pinButton.addEventListener("click", async () =>
-                    {
-                        await window.notesPanelApi.pinNote("Minecraft principal", {
-                            title: titleEl.value,
-                            content: contentEl.value
-                        });
-                        window.close();
-                    });
-
-                    actionsEl.appendChild(saveButton);
-                    actionsEl.appendChild(pinButton);
-
-                    noteEl.appendChild(titleEl);
-                    noteEl.appendChild(contentEl);
-                    noteEl.appendChild(actionsEl);
-
-                    otherNotesList.appendChild(noteEl);
-                });
-            }
-
-            loadNotes();
-        });
-    </script>
+    <script src="./notes-panel.js"></script>
 </body>
 </html>

@@ -2,8 +2,8 @@
 <html lang="fr">
 <head>
     <meta charset="utf-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'self'">
     <title>PAUL Overlay</title>
-
 
     <style>
         html,
@@ -20,71 +20,53 @@
         }
 
 
-        /* Note épinglée (visuel seul, ne bloque pas le jeu) */
-        .overlay-pinned-note
+        .pinned-notes
         {
             position:       fixed;
             top:            16px;
             right:          16px;
-            max-width:      260px;
-            border-radius:  8px;
-            border:         1px solid rgba(127, 127, 127, 0.35);
-            background:     rgba(12, 12, 12, 0.90);
-            padding:        12px;
+            display:        flex;
+            flex-direction: column;
+            gap:            8px;
+            width:          280px;
+            max-height:     calc(100vh - 32px);
+            overflow:       hidden;
             pointer-events: none;
-            z-index:        1;
         }
 
 
-        .overlay-pinned-note-title
+        .pinned-note
         {
-            font-size:   0.9rem;
-            font-weight: 600;
+            border-radius: 8px;
+            border:        1px solid rgba(127, 127, 127, 0.35);
+            background:    rgba(12, 12, 12, 0.90);
+            padding:       12px;
+        }
+
+
+        .pinned-note-title
+        {
+            font-size:     0.9rem;
+            font-weight:   600;
             margin-bottom: 4px;
+            overflow-wrap: anywhere;
         }
 
 
-        .overlay-pinned-note-content
+        .pinned-note-content
         {
-            font-size: 0.85rem;
-            color:     #d1ccc2;
+            font-size:     0.85rem;
+            color:         #d1ccc2;
+            white-space:   pre-wrap;
+            overflow-wrap: anywhere;
         }
     </style>
 </head>
 
 
 <body>
-    <!-- Note épinglée -->
-    <div id="overlayPinnedNote" class="overlay-pinned-note" style="display:none;">
-        <div id="overlayPinnedNoteTitle" class="overlay-pinned-note-title"></div>
-        <div id="overlayPinnedNoteContent" class="overlay-pinned-note-content"></div>
-    </div>
+    <div id="pinnedNotes" class="pinned-notes"></div>
 
-
-    <script>
-        const noteEl        = document.getElementById("overlayPinnedNote");
-        const noteTitleEl   = document.getElementById("overlayPinnedNoteTitle");
-        const noteContentEl = document.getElementById("overlayPinnedNoteContent");
-
-
-        window.addEventListener("message", (event) =>
-        {
-            if (event.data && event.data.type === "overlay:pinNote")
-            {
-                const payload = event.data.payload;
-
-
-                noteTitleEl.textContent   = payload.note.title;
-                noteContentEl.textContent = payload.note.content;
-                noteEl.style.display      = "block";
-            }
-
-
-            if (event.data && event.data.type === "overlay:unpinNote")
-            {
-                noteEl.style.display = "none";
-            }
-        });
-    </script>
+    <script src="./overlay.js"></script>
 </body>
 </html>

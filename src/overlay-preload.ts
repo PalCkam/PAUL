@@ -1,16 +1,21 @@
 import { contextBridge, ipcRenderer } from "electron";
 
+import type { PinnedNoteView } from "./types";
 
-// Pas d'API exposée ici, le désépinglage se fait depuis le panneau Notes
 
 
-ipcRenderer.on("overlay:pinNote", (_event, payload) =>
+contextBridge.exposeInMainWorld("overlayApi",
 {
-    window.postMessage({ type: "overlay:pinNote", payload }, "*");
-});
+    getPinnedNotes()
+    {
+        return ipcRenderer.invoke("overlay:getPinnedNotes");
+    },
 
-
-ipcRenderer.on("overlay:unpinNote", () =>
-{
-    window.postMessage({ type: "overlay:unpinNote" }, "*");
+    onPinnedNotesChanged(callback: (notes: PinnedNoteView[]) => void)
+    {
+        ipcRenderer.on("overlay:pinnedNotes", (_event, notes: PinnedNoteView[]) =>
+        {
+            callback(notes);
+        });
+    }
 });
