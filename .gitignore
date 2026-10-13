@@ -144,5 +144,5 @@ vite.config.ts.timestamp-*
 
 release/
 release-pack/
-data/usage.json
-data/game-profiles.json
+# Données locales (anciennes versions : stockées dans le projet)
+data/
