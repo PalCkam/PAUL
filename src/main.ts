@@ -1,5 +1,6 @@
 import { app, globalShortcut, ipcMain } from "electron";
 import { randomUUID } from "node:crypto";
+import path from "node:path";
 
 import { GAME_MODULES } from "./modules";
 import
@@ -12,6 +13,9 @@ import
     writeProfilesFile,
     writeUsageFile
 } from "./store";
+import { linkLegacyProfiles } from "./profiles";
+import { loadGames } from "./tasks/loader";
+import type { LoadResult } from "./tasks/types";
 import type { LaunchEntry, LaunchPayload, Note, NoteChanges, PinnedNoteView, UsageData } from "./types";
 import { isNonEmptyString, isRecord } from "./utils";
 import
@@ -38,6 +42,7 @@ const CLOSE_SHORTCUT  = "Escape";
 let currentProfileName: string | null = null;
 let pinnedNoteIds:      string[]      = [];
 let hasLaunched                       = false;
+let loadedGames:        LoadResult    = { games: [], errors: [] };
 
 
 
@@ -306,11 +311,28 @@ ipcMain.handle("profiles:list", async () =>
 
 
 
-ipcMain.handle("profiles:create", async (_event, gameName: unknown) =>
+ipcMain.handle("games:list", () =>
+{
+    return loadedGames.games.map((game) =>
+    {
+        return { id: game.id, name: game.name };
+    });
+});
+
+
+
+ipcMain.handle("profiles:create", async (_event, gameName: unknown, gameId: unknown) =>
 {
     if (!isNonEmptyString(gameName))
     {
-        return { ok: false, message: "Nom de jeu invalide." };
+        return { ok: false, message: "Nom de profil invalide." };
+    }
+
+    const knownGame = typeof gameId === "string" && loadedGames.games.some((game) => game.id === gameId);
+
+    if (gameId !== null && !knownGame)
+    {
+        return { ok: false, message: "Jeu inconnu." };
     }
 
     const cleanName = gameName.trim();
@@ -326,7 +348,7 @@ ipcMain.handle("profiles:create", async (_event, gameName: unknown) =>
         return { ok: false, message: "Ce profil existe déjà." };
     }
 
-    const nextProfiles = [{ name: cleanName }, ...data.profiles];
+    const nextProfiles = [{ name: cleanName, gameId: gameId as string | null }, ...data.profiles];
 
     await writeProfilesFile({ profiles: nextProfiles, launchHistory: data.launchHistory });
 
@@ -586,6 +608,13 @@ ipcMain.handle("overlay:getPinnedNotes", () =>
 
 
 
+ipcMain.handle("tasks:list", () =>
+{
+    return loadedGames;
+});
+
+
+
 // ---------------------------------------------------------------------------
 // Cycle de vie
 // ---------------------------------------------------------------------------
@@ -614,6 +643,25 @@ else
     app.whenReady().then(async () =>
     {
         await migrateLegacyProfiles();
+
+        loadedGames = await loadGames(path.join(__dirname, "..", "games"));
+
+        for (const error of loadedGames.errors)
+        {
+            console.warn(`[tâches] ${error}`);
+        }
+
+        const stored = await readProfilesFile();
+
+        if (stored.profiles.some((profile) => profile.gameId === undefined))
+        {
+            const games = loadedGames.games.map((game) => ({ id: game.id, name: game.name }));
+
+            await writeProfilesFile({
+                profiles:      linkLegacyProfiles(stored.profiles, games),
+                launchHistory: stored.launchHistory
+            });
+        }
 
         createLauncherWindow(() =>
         {

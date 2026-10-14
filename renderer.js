@@ -8,6 +8,7 @@ const state =
     history:       [],
     theme:         "dark",
     gameProfiles:  [],
+    games:         [],
     selectedGame:  null,
     isNewGameOpen: false,
     hasLaunched:   false
@@ -54,6 +55,7 @@ const els =
     newGameToggleButton:  document.getElementById("newGameToggleButton"),
     newGameForm:          document.getElementById("newGameForm"),
     newGameInput:         document.getElementById("newGameInput"),
+    newGameGameSelect:    document.getElementById("newGameGameSelect"),
     createGameButton:     document.getElementById("createGameButton"),
     modButtons:           Array.from(document.querySelectorAll("[data-mod]"))
 };
@@ -126,13 +128,71 @@ async function loadProfiles()
     }
 }
 
+const NO_GAME_VALUE = "";
+
+function renderGameOptions()
+{
+    const options = state.games.map((game) =>
+    {
+        const option = document.createElement("option");
+
+        option.value       = game.id;
+        option.textContent = game.name;
+
+        return option;
+    });
+
+    const otherOption = document.createElement("option");
+
+    otherOption.value       = NO_GAME_VALUE;
+    otherOption.textContent = "Autre jeu (notes seulement)";
+
+    els.newGameGameSelect.replaceChildren(...options, otherOption);
+}
+
+async function loadGames()
+{
+    if (!window.paulApi || typeof window.paulApi.listGames !== "function")
+    {
+        renderGameOptions();
+        return;
+    }
+
+    try
+    {
+        const games = await window.paulApi.listGames();
+
+        state.games = Array.isArray(games) ? games : [];
+    }
+    catch
+    {
+        state.games = [];
+    }
+
+    renderGameOptions();
+    render();
+}
+
+function getGameLabel(profile)
+{
+    if (!profile.gameId)
+    {
+        return "Autre jeu";
+    }
+
+    const game = state.games.find((candidate) => candidate.id === profile.gameId);
+
+    return game ? game.name : "Jeu introuvable";
+}
+
 async function createGameProfile()
 {
     const gameName = els.newGameInput.value.trim();
+    const gameId   = els.newGameGameSelect.value === NO_GAME_VALUE ? null : els.newGameGameSelect.value;
 
     if (!gameName)
     {
-        els.gameProfilesHint.textContent = "Entre un nom de jeu.";
+        els.gameProfilesHint.textContent = "Entre un nom de profil.";
         return;
     }
 
@@ -143,7 +203,7 @@ async function createGameProfile()
 
     try
     {
-        const result = await window.paulApi.createProfile(gameName);
+        const result = await window.paulApi.createProfile(gameName, gameId);
 
         if (!result.ok)
         {
@@ -409,6 +469,7 @@ function renderGameProfiles()
                 <li class="game-profile-item">
                     <div class="game-profile-main">
                         <span class="game-profile-name">${safeName}</span>
+                        <span class="game-profile-path">${escapeHtml(getGameLabel(profile))}</span>
                     </div>
 
                     <div class="game-profile-actions">
@@ -617,6 +678,7 @@ els.modButtons.forEach((button) =>
 document.documentElement.setAttribute("data-theme", state.theme);
 
 bindProfileEvents();
+loadGames();
 loadProfiles();
 loadUsage();
 loadHistory();

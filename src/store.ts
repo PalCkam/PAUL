@@ -80,7 +80,9 @@ function toGameProfile(value: unknown): GameProfile | null
         return null;
     }
 
-    return { name: value.name.trim() };
+    const gameId = typeof value.gameId === "string" ? value.gameId : value.gameId === null ? null : undefined;
+
+    return { name: value.name.trim(), gameId };
 }
 
 

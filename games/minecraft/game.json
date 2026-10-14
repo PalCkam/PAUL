@@ -1,0 +1,17 @@
+{
+    "id": "minecraft",
+    "name": "Minecraft",
+    "capabilities":
+    [
+        {
+            "id": "analyze-environment",
+            "label": "Analyser l'environnement",
+            "description": "Lire l'inventaire, repérer les fours devant le joueur et lire leur contenu."
+        },
+        {
+            "id": "move-player",
+            "label": "Déplacer le personnage",
+            "description": "Se déplacer le long d'une ligne de blocs et se placer devant un bloc."
+        }
+    ]
+}

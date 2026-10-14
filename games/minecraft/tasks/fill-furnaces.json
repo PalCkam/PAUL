@@ -1,0 +1,47 @@
+{
+    "id": "fill-furnaces",
+    "name": "Remplir les fours",
+    "description": "Remplit la ligne de fours devant le joueur avec les items à cuire et le carburant choisis, en plusieurs tours si besoin (attente puis récupération).",
+    "requires": ["analyze-environment", "move-player"],
+    "parameters":
+    [
+        {
+            "id": "items",
+            "type": "items",
+            "label": "Items à cuire",
+            "description": "Seuls ces items sont mis dans les fours.",
+            "filter": "smeltable",
+            "required": true
+        },
+        {
+            "id": "fuel",
+            "type": "items",
+            "label": "Carburant",
+            "description": "Seuls ces carburants sont utilisés.",
+            "filter": "fuel",
+            "required": true
+        },
+        {
+            "id": "maxFurnaces",
+            "type": "number",
+            "label": "Nombre de fours maximum",
+            "integer": true,
+            "min": 1,
+            "emptyMeans": "tous les fours"
+        },
+        {
+            "id": "maxRounds",
+            "type": "number",
+            "label": "Nombre de tours maximum",
+            "integer": true,
+            "min": 1,
+            "emptyMeans": "autant que nécessaire"
+        },
+        {
+            "id": "collectOutput",
+            "type": "boolean",
+            "label": "Récupérer les produits cuits",
+            "default": true
+        }
+    ]
+}

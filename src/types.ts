@@ -15,7 +15,8 @@ export type LaunchPayload =
 
 export type GameProfile =
 {
-    name: string;
+    name:    string;
+    gameId?: string | null;
 };
 
 

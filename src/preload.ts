@@ -16,9 +16,14 @@ contextBridge.exposeInMainWorld("paulApi",
         return ipcRenderer.invoke("profiles:list");
     },
 
-    createProfile(gameName: string)
+    listGames()
     {
-        return ipcRenderer.invoke("profiles:create", gameName);
+        return ipcRenderer.invoke("games:list");
+    },
+
+    createProfile(profileName: string, gameId: string | null)
+    {
+        return ipcRenderer.invoke("profiles:create", profileName, gameId);
     },
 
     deleteProfile(gameName: string)
