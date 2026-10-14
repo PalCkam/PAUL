@@ -2,6 +2,7 @@ import { isRecord } from "../utils";
 import type
 {
     ChoiceOption,
+    ItemAmount,
     ItemCatalog,
     ItemDefinition,
     ParameterError,
@@ -163,6 +164,48 @@ function resolveValue(parameter: TaskParameter, raw: unknown, catalog: ItemCatal
             }
 
             return accept(items);
+        }
+
+        case "itemAmounts":
+        {
+            if (!Array.isArray(raw))
+            {
+                return reject(`"${parameter.label}" doit être une liste d'items avec leur quantité.`);
+            }
+
+            const entries: ItemAmount[] = [];
+
+            for (const entry of raw as unknown[])
+            {
+                const itemId = typeof entry === "string" ? entry : (isRecord(entry) ? entry.itemId : undefined);
+                const amount = isRecord(entry) && entry.amount !== undefined ? entry.amount : null;
+
+                if (typeof itemId !== "string" || itemId.trim() === "")
+                {
+                    return reject(`"${parameter.label}" doit être une liste d'items avec leur quantité.`);
+                }
+
+                if (amount !== null && (typeof amount !== "number" || !Number.isInteger(amount) || amount < 1))
+                {
+                    return reject(`La quantité de "${itemId.trim()}" doit être un nombre entier d'au moins 1 (vide = tout).`);
+                }
+
+                entries.push({ itemId: itemId.trim(), amount });
+            }
+
+            if (new Set(entries.map((entry: ItemAmount) => entry.itemId)).size !== entries.length)
+            {
+                return reject(`"${parameter.label}" contient un item en double.`);
+            }
+
+            const refused = entries.find((entry: ItemAmount) => refusedByCatalog(parameter.filter, entry.itemId, catalog));
+
+            if (refused)
+            {
+                return reject(`"${refused.itemId}" n'est pas accepté pour "${parameter.label}".`);
+            }
+
+            return accept(entries);
         }
     }
 }

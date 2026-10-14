@@ -1,8 +1,7 @@
 import assert           from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { MAX_PRESET_NAME_LENGTH, parsePresetMeta, toOverlayCard, upsertPreset } from "./presets";
-import type { Preset } from "./types";
+import { MAX_PRESET_NAME_LENGTH, parsePresetName, toOverlayCard, upsertPreset } from "./presets";
 
 
 
@@ -10,29 +9,27 @@ let counter = 0;
 
 const newId = (): string => `id${++counter}`;
 
-const iron   = { items: ["raw_iron"], fuel: ["coal"] };
-const copper = { items: ["raw_copper"], fuel: ["coal"] };
+const iron   = { items: [{ itemId: "raw_iron", amount: 128 }], fuel: ["coal"] };
+const copper = { items: [{ itemId: "raw_copper", amount: null }], fuel: ["coal"] };
 
 
 
 // ---------------------------------------------------------------------------
-// Nom et touche d'un préréglage
+// Nom d'un préréglage
 // ---------------------------------------------------------------------------
 
-describe("nom et touche d'un préréglage", () =>
+describe("nom d'un préréglage", () =>
 {
-    it("accepte un nom et une touche du pavé 1 à 9, ou aucune touche", () =>
+    it("accepte un nom et retire les espaces autour", () =>
     {
-        assert.deepEqual(parsePresetMeta("  Fer  ", 3), { ok: true, meta: { name: "Fer", key: 3 } });
-        assert.deepEqual(parsePresetMeta("Fer", null), { ok: true, meta: { name: "Fer", key: null } });
-        assert.deepEqual(parsePresetMeta("Fer", ""), { ok: true, meta: { name: "Fer", key: null } });
+        assert.deepEqual(parsePresetName("  Fer  "), { ok: true, name: "Fer" });
     });
 
     it("refuse un nom vide ou trop long", () =>
     {
         for (const name of ["", "   ", undefined, 5, "x".repeat(MAX_PRESET_NAME_LENGTH + 1)])
         {
-            const result = parsePresetMeta(name, null);
+            const result = parsePresetName(name);
 
             assert.equal(result.ok, false);
 
@@ -40,16 +37,6 @@ describe("nom et touche d'un préréglage", () =>
             {
                 assert.equal(result.errors[0].parameterId, "name");
             }
-        }
-    });
-
-    it("refuse les touches hors du pavé 1 à 9 (0 est réservé à l'arrêt)", () =>
-    {
-        for (const key of [0, 10, -1, 2.5, "3", "a"])
-        {
-            const result = parsePresetMeta("Fer", key);
-
-            assert.equal(result.ok, false, String(key));
         }
     });
 });
@@ -64,53 +51,41 @@ describe("enregistrement des préréglages", () =>
 {
     it("ajoute un nouveau préréglage", () =>
     {
-        const result = upsertPreset([], { taskId: "fill-furnaces", name: "Fer", values: iron, key: 1 }, newId);
+        const result = upsertPreset([], { taskId: "fill-furnaces", name: "Fer", values: iron }, newId);
 
         assert.equal(result.created, true);
         assert.equal(result.presets.length, 1);
-        assert.equal(result.notice, null);
-        assert.equal(result.preset.key, 1);
+        assert.deepEqual(result.preset.values, iron);
     });
 
     it("remplace un préréglage du même nom (sans tenir compte de la casse) en gardant son identifiant", () =>
     {
-        const first  = upsertPreset([], { taskId: "fill-furnaces", name: "Fer", values: iron, key: 1 }, newId);
-        const second = upsertPreset(first.presets, { taskId: "fill-furnaces", name: "fer", values: copper, key: 2 }, newId);
+        const first  = upsertPreset([], { taskId: "fill-furnaces", name: "Fer", values: iron }, newId);
+        const second = upsertPreset(first.presets, { taskId: "fill-furnaces", name: "fer", values: copper }, newId);
 
         assert.equal(second.created, false);
         assert.equal(second.presets.length, 1);
         assert.equal(second.preset.id, first.preset.id);
         assert.deepEqual(second.presets[0].values, copper);
-        assert.equal(second.presets[0].key, 2);
+        assert.equal(second.presets[0].name, "fer");
     });
 
     it("deux tâches différentes peuvent avoir un préréglage du même nom", () =>
     {
-        const first  = upsertPreset([], { taskId: "fill-furnaces", name: "Rapide", values: iron, key: null }, newId);
-        const second = upsertPreset(first.presets, { taskId: "autre-tache", name: "Rapide", values: {}, key: null }, newId);
+        const first  = upsertPreset([], { taskId: "fill-furnaces", name: "Rapide", values: iron }, newId);
+        const second = upsertPreset(first.presets, { taskId: "autre-tache", name: "Rapide", values: {} }, newId);
 
         assert.equal(second.presets.length, 2);
     });
 
-    it("retire la touche à l'ancien préréglage et le signale", () =>
+    it("garde l'ordre des préréglages existants", () =>
     {
-        const first  = upsertPreset([], { taskId: "fill-furnaces", name: "Fer", values: iron, key: 1 }, newId);
-        const second = upsertPreset(first.presets, { taskId: "fill-furnaces", name: "Cuivre", values: copper, key: 1 }, newId);
+        let presets = upsertPreset([], { taskId: "t", name: "A", values: {} }, newId).presets;
 
-        const byName = (name: string): Preset | undefined => second.presets.find((preset) => preset.name === name);
+        presets = upsertPreset(presets, { taskId: "t", name: "B", values: {} }, newId).presets;
+        presets = upsertPreset(presets, { taskId: "t", name: "a", values: iron }, newId).presets;
 
-        assert.equal(byName("Fer")?.key, null);
-        assert.equal(byName("Cuivre")?.key, 1);
-        assert.match(second.notice ?? "", /Pavé 1 était utilisé par « Fer »/);
-    });
-
-    it("garder la même touche sur le même préréglage ne produit aucun avertissement", () =>
-    {
-        const first  = upsertPreset([], { taskId: "fill-furnaces", name: "Fer", values: iron, key: 4 }, newId);
-        const second = upsertPreset(first.presets, { taskId: "fill-furnaces", name: "Fer", values: iron, key: 4 }, newId);
-
-        assert.equal(second.notice, null);
-        assert.equal(second.presets[0].key, 4);
+        assert.deepEqual(presets.map((preset) => preset.name), ["a", "B"]);
     });
 });
 

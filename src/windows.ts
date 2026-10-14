@@ -5,7 +5,6 @@ import path from "node:path";
 
 const rootDir = path.join(__dirname, "..");
 
-const PANEL_WIDTH             = 340;
 const DOCK_BUTTON_SIZE        = 56;
 const DOCK_GAP                = 8;
 const DOCK_PADDING            = 8;
@@ -14,15 +13,37 @@ const KEEP_ON_TOP_INTERVAL_MS = 2000;
 
 
 
-export type PanelId = "notes" | "tasks";
+export type PanelId = "notes" | "tasks" | "shortcuts";
 
 const PANEL_FILES: Record<PanelId, { html: string; preload: string }> =
 {
     notes: { html: "notes-panel.html", preload: "notes-panel-preload.js" },
-    tasks: { html: "tasks-panel.html", preload: "tasks-panel-preload.js" }
+    tasks: { html: "tasks-panel.html", preload: "tasks-panel-preload.js" },
+
+    shortcuts: { html: "shortcuts-panel.html", preload: "shortcuts-panel-preload.js" }
 };
 
 const PANEL_IDS = Object.keys(PANEL_FILES) as PanelId[];
+
+const PANEL_LAYOUTS: Record<PanelId, (area: Electron.Rectangle) => Electron.Rectangle> =
+{
+    notes: (area) => ({ x: area.x, y: area.y, width: 340, height: area.height }),
+
+    tasks: (area) => ({ x: area.x + area.width - 420, y: area.y, width: 420, height: area.height }),
+
+    shortcuts: (area) =>
+    {
+        const width  = 460;
+        const height = Math.min(680, area.height - 80);
+
+        return {
+            x:      Math.round(area.x + (area.width - width) / 2),
+            y:      Math.round(area.y + (area.height - height) / 2),
+            width,
+            height
+        };
+    }
+};
 
 
 
@@ -31,6 +52,8 @@ let overlayWindow:  BrowserWindow | null = null;
 let dockWindow:     BrowserWindow | null = null;
 
 const panelWindows: Partial<Record<PanelId, BrowserWindow>> = {};
+
+let panelOrder: PanelId[] = [];
 
 let keepOnTopTimer: NodeJS.Timeout | null = null;
 
@@ -192,13 +215,13 @@ function createDockWindow(moduleCount: number): BrowserWindow
 
 function createPanelWindow(panelId: PanelId): BrowserWindow
 {
-    const { x, y, width, height } = getScreenBounds();
+    const { x, y, width, height } = PANEL_LAYOUTS[panelId](getScreenBounds());
 
     const win = new BrowserWindow(
     {
-        x:               x + width - PANEL_WIDTH,
+        x,
         y,
-        width:           PANEL_WIDTH,
+        width,
         height,
         transparent:     true,
         frame:           false,
@@ -224,6 +247,8 @@ function createPanelWindow(panelId: PanelId): BrowserWindow
     win.on("closed", () =>
     {
         delete panelWindows[panelId];
+
+        panelOrder = panelOrder.filter((id: PanelId) => id !== panelId);
     });
 
     return win;
@@ -240,7 +265,7 @@ function startKeepOnTop(): void
 
     keepOnTopTimer = setInterval(() =>
     {
-        for (const win of [overlayWindow, dockWindow, ...PANEL_IDS.map((panelId: PanelId) => panelWindows[panelId])])
+        for (const win of [overlayWindow, dockWindow, ...panelOrder.map((panelId: PanelId) => panelWindows[panelId])])
         {
             if (isAlive(win) && win.isVisible())
             {
@@ -306,6 +331,23 @@ export function isDockVisible(): boolean
 
 
 
+export function getOpenPanels(): PanelId[]
+{
+    return panelOrder.filter((panelId: PanelId) => isPanelVisible(panelId));
+}
+
+
+
+function notifyDock(): void
+{
+    if (isAlive(dockWindow))
+    {
+        dockWindow.webContents.send("dock:openPanels", getOpenPanels());
+    }
+}
+
+
+
 export function showPanel(panelId: PanelId): void
 {
     const panel = panelWindows[panelId] ?? null;
@@ -315,25 +357,62 @@ export function showPanel(panelId: PanelId): void
         return;
     }
 
-    hidePanel();
-
     panel.webContents.send("panel:refresh");
     panel.show();
     panel.focus();
+
+    panelOrder = [...panelOrder.filter((id: PanelId) => id !== panelId), panelId];
+
+    notifyDock();
 }
 
 
 
-export function hidePanel(): void
+export function hidePanel(panelId?: PanelId): void
 {
-    for (const panelId of PANEL_IDS)
+    const ids = panelId ? [panelId] : [...PANEL_IDS];
+
+    for (const id of ids)
     {
-        const panel = panelWindows[panelId] ?? null;
+        const panel = panelWindows[id] ?? null;
 
         if (isAlive(panel) && panel.isVisible())
         {
             panel.hide();
         }
+    }
+
+    panelOrder = panelOrder.filter((id: PanelId) => !ids.includes(id));
+
+    notifyDock();
+}
+
+
+
+export function hideTopPanel(): void
+{
+    const open = getOpenPanels();
+
+    if (open.length > 0)
+    {
+        hidePanel(open[open.length - 1]);
+    }
+}
+
+
+
+export function closePanelOf(sender: unknown): void
+{
+    const owner = PANEL_IDS.find((panelId: PanelId) =>
+    {
+        const panel = panelWindows[panelId] ?? null;
+
+        return isAlive(panel) && panel.webContents === sender;
+    });
+
+    if (owner)
+    {
+        hidePanel(owner);
     }
 }
 
@@ -357,7 +436,7 @@ export function togglePanel(panelId: PanelId): void
 {
     if (isPanelVisible(panelId))
     {
-        hidePanel();
+        hidePanel(panelId);
     }
     else
     {

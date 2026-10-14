@@ -5,8 +5,6 @@ const taskListEl     = document.getElementById("taskList");
 const taskDetailsEl  = document.getElementById("taskDetails");
 const closeButton    = document.getElementById("closeButton");
 
-const PRESET_KEYS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-
 const state =
 {
     context:        null,
@@ -79,6 +77,10 @@ function createInitialValues(task)
         {
             values[parameter.id] = parameter.default ? [...parameter.default] : [];
         }
+        else if (parameter.type === "itemAmounts")
+        {
+            values[parameter.id] = [];
+        }
         else
         {
             values[parameter.id] = parameter.default !== undefined ? parameter.default : "";
@@ -121,13 +123,30 @@ function capitalize(text)
 }
 
 
+function formatStacks(count, stackSize)
+{
+    if (!(count >= stackSize))
+    {
+        return "";
+    }
+
+    const stacks = Math.floor(count / stackSize);
+    const rest   = count % stackSize;
+
+    return `= ${stacks} stack${stacks > 1 ? "s" : ""}${rest > 0 ? ` + ${rest}` : ""}`;
+}
+
+
 function createItemsControl(parameter, values)
 {
-    const container  = createElement("div", "items-control");
-    const chipsEl    = createElement("div", "chips");
-    const searchEl   = createElement("input");
-    const optionsEl  = createElement("div", "item-options");
-    const items      = getItemsFor(parameter.filter);
+    const withAmounts = parameter.type === "itemAmounts";
+    const container   = createElement("div", "items-control");
+    const selectedEl  = createElement("div", withAmounts ? "amount-rows" : "chips");
+    const searchEl    = createElement("input");
+    const optionsEl   = createElement("div", "item-options");
+    const items       = getItemsFor(parameter.filter);
+
+    const entryId = (entry) => (withAmounts ? entry.itemId : entry);
 
     searchEl.type        = "text";
     searchEl.placeholder = "Rechercher un item";
@@ -135,11 +154,11 @@ function createItemsControl(parameter, values)
     function toggle(itemId)
     {
         const selected = values[parameter.id];
-        const position = selected.indexOf(itemId);
+        const position = selected.findIndex((entry) => entryId(entry) === itemId);
 
         if (position === -1)
         {
-            selected.push(itemId);
+            selected.push(withAmounts ? { itemId, amount: "" } : itemId);
         }
         else
         {
@@ -150,17 +169,60 @@ function createItemsControl(parameter, values)
         renderItems();
     }
 
+    function createAmountRow(entry)
+    {
+        const row       = createElement("div", "amount-row");
+        const name      = createElement("span", "amount-name", getItemName(entry.itemId));
+        const input     = createElement("input");
+        const hint      = createElement("span", "amount-hint");
+        const remove    = createElement("button", "amount-remove", "✕");
+        const definition = state.context.items.find((candidate) => candidate.id === entry.itemId);
+        const stackSize  = definition ? definition.stackSize : 64;
+
+        input.type        = "number";
+        input.min         = "1";
+        input.step        = "1";
+        input.placeholder = "Tout";
+        input.value       = entry.amount;
+
+        remove.type = "button";
+
+        function updateHint()
+        {
+            hint.textContent = formatStacks(Number(input.value), stackSize);
+        }
+
+        input.addEventListener("input", () =>
+        {
+            entry.amount = input.value;
+            updateHint();
+            clearResult();
+        });
+
+        remove.addEventListener("click", () => toggle(entry.itemId));
+
+        updateHint();
+        row.append(name, input, remove, hint);
+
+        return row;
+    }
+
     function renderItems()
     {
         const selected = values[parameter.id];
         const query    = searchEl.value.trim().toLowerCase();
 
-        chipsEl.replaceChildren(...selected.map((itemId) =>
+        selectedEl.replaceChildren(...selected.map((entry) =>
         {
-            const chip = createElement("button", "chip", `${getItemName(itemId)} ✕`);
+            if (withAmounts)
+            {
+                return createAmountRow(entry);
+            }
+
+            const chip = createElement("button", "chip", `${getItemName(entry)} ✕`);
 
             chip.type = "button";
-            chip.addEventListener("click", () => toggle(itemId));
+            chip.addEventListener("click", () => toggle(entry));
 
             return chip;
         }));
@@ -178,7 +240,7 @@ function createItemsControl(parameter, values)
 
         optionsEl.replaceChildren(...matches.map((item) =>
         {
-            const isSelected = selected.includes(item.id);
+            const isSelected = selected.some((entry) => entryId(entry) === item.id);
             const option     = createElement("button", isSelected ? "item-option is-selected" : "item-option");
 
             option.type = "button";
@@ -191,67 +253,8 @@ function createItemsControl(parameter, values)
 
     searchEl.addEventListener("input", renderItems);
 
-    container.append(chipsEl, searchEl, optionsEl);
+    container.append(selectedEl, searchEl, optionsEl);
     renderItems();
-
-    return container;
-}
-
-
-document.addEventListener("click", (event) =>
-{
-    for (const list of document.querySelectorAll(".dropdown-list"))
-    {
-        if (!list.parentElement.contains(event.target))
-        {
-            list.classList.add("is-hidden");
-        }
-    }
-});
-
-
-function createDropdown(options, initialValue, onChange)
-{
-    const container = createElement("div", "dropdown");
-    const toggle    = createElement("button", "dropdown-toggle");
-    const list      = createElement("div", "dropdown-list is-hidden");
-
-    let value = initialValue;
-
-    toggle.type = "button";
-
-    function render()
-    {
-        const selected = options.find((option) => option.value === value);
-
-        toggle.textContent = `${selected ? selected.label : "—"} ▾`;
-
-        list.replaceChildren(...options.map((option) =>
-        {
-            const isSelected = option.value === value;
-            const button     = createElement("button", isSelected ? "dropdown-option is-selected" : "dropdown-option", option.label);
-
-            button.type = "button";
-
-            button.addEventListener("click", () =>
-            {
-                value = option.value;
-                list.classList.add("is-hidden");
-                render();
-                onChange(value);
-            });
-
-            return button;
-        }));
-    }
-
-    toggle.addEventListener("click", () =>
-    {
-        list.classList.toggle("is-hidden");
-    });
-
-    container.append(toggle, list);
-    render();
 
     return container;
 }
@@ -279,6 +282,7 @@ function createControl(parameter, values)
     switch (parameter.type)
     {
         case "items":
+        case "itemAmounts":
         {
             return createItemsControl(parameter, values);
         }
@@ -393,6 +397,14 @@ function formatValue(parameter, value)
         return value ? "oui" : "non";
     }
 
+    if (parameter.type === "itemAmounts")
+    {
+        return value.map((entry) =>
+        {
+            return entry.amount === null ? `${getItemName(entry.itemId)} (tout)` : `${getItemName(entry.itemId)} ×${entry.amount}`;
+        }).join(", ");
+    }
+
     if (parameter.type === "items")
     {
         return value.map(getItemName).join(", ");
@@ -428,7 +440,17 @@ function buildPayload(task)
             continue;
         }
 
-        payload[parameter.id] = parameter.type === "number" ? Number(value) : value;
+        if (parameter.type === "itemAmounts")
+        {
+            payload[parameter.id] = value.map((entry) =>
+            {
+                return { itemId: entry.itemId, amount: entry.amount === "" ? null : Number(entry.amount) };
+            });
+        }
+        else
+        {
+            payload[parameter.id] = parameter.type === "number" ? Number(value) : value;
+        }
     }
 
     return payload;
@@ -578,7 +600,7 @@ function getDraft(task)
 {
     if (!state.draftByTask[task.id])
     {
-        state.draftByTask[task.id] = { name: "", key: null };
+        state.draftByTask[task.id] = { name: "" };
     }
 
     return state.draftByTask[task.id];
@@ -599,7 +621,24 @@ function createValuesFromPreset(task, saved)
     {
         const value = saved[parameter.id];
 
-        if (value !== undefined)
+        if (value === undefined)
+        {
+            continue;
+        }
+
+        if (parameter.type === "itemAmounts")
+        {
+            values[parameter.id] = value.map((entry) =>
+            {
+                if (typeof entry === "string")
+                {
+                    return { itemId: entry, amount: "" };
+                }
+
+                return { itemId: entry.itemId, amount: entry.amount === null || entry.amount === undefined ? "" : entry.amount };
+            });
+        }
+        else
         {
             values[parameter.id] = Array.isArray(value) ? [...value] : value;
         }
@@ -633,18 +672,13 @@ function createPresetRow(task, preset)
 
     label.append(createElement("span", "preset-name", preset.name));
 
-    if (preset.key !== null)
-    {
-        label.append(createElement("span", "preset-badge", `Pavé ${preset.key}`));
-    }
-
     load.type   = "button";
     remove.type = "button";
 
     load.addEventListener("click", () =>
     {
         state.valuesByTask[task.id] = createValuesFromPreset(task, preset.values);
-        state.draftByTask[task.id]  = { name: preset.name, key: preset.key };
+        state.draftByTask[task.id]  = { name: preset.name };
 
         renderTaskDetails();
         setPresetMessage(`Préréglage « ${preset.name} » chargé.`, false);
@@ -711,22 +745,21 @@ function createPresetList(task)
 async function saveCurrentPreset(task)
 {
     const draft  = getDraft(task);
-    const result = await api.savePreset(task.id, draft.name, buildPayload(task), draft.key);
+    const result = await api.savePreset(task.id, draft.name, buildPayload(task));
 
     if (!result.ok)
     {
-        const metaErrors = result.errors.filter((error) => error.parameterId === "name" || error.parameterId === "key");
+        const nameErrors  = result.errors.filter((error) => error.parameterId === "name");
+        const otherErrors = result.errors.filter((error) => error.parameterId !== "name");
+        const messages    = nameErrors.map((error) => error.message);
 
-        if (metaErrors.length > 0)
+        if (otherErrors.length > 0)
         {
-            setPresetMessage(metaErrors.map((error) => error.message).join(" "), true);
+            showResult(task, { ok: false, errors: otherErrors });
+            messages.push("Corrige les réglages avant d'enregistrer.");
         }
 
-        if (metaErrors.length < result.errors.length)
-        {
-            showResult(task, { ok: false, errors: result.errors.filter((error) => !metaErrors.includes(error)) });
-            setPresetMessage("Corrige les réglages avant d'enregistrer.", true);
-        }
+        setPresetMessage(messages.join(" "), true);
 
         return;
     }
@@ -734,43 +767,16 @@ async function saveCurrentPreset(task)
     state.presets = result.presets;
 
     renderTaskDetails();
-    setPresetMessage(result.notice || (result.created ? "Préréglage enregistré." : "Préréglage mis à jour."), false);
+    setPresetMessage(result.created ? "Préréglage enregistré." : "Préréglage mis à jour.", false);
 }
 
 
 function createSaveSection(task)
 {
-    const section   = createElement("div", "preset-section");
-    const draft     = getDraft(task);
-    const nameEl    = createElement("input");
-    const keyHolder = createElement("div");
-    const button    = createElement("button", "", "Enregistrer le préréglage");
-
-    function createKeyOptions()
-    {
-        const draftName = draft.name.trim().toLowerCase();
-        const options   = [{ value: "", label: "Aucune touche" }];
-
-        for (const key of PRESET_KEYS)
-        {
-            const owner = state.presets.find((preset) =>
-            {
-                return preset.key === key && !(preset.taskId === task.id && preset.name.toLowerCase() === draftName);
-            });
-
-            options.push({ value: String(key), label: owner ? `Pavé ${key} (utilisé par « ${owner.name} »)` : `Pavé ${key}` });
-        }
-
-        return options;
-    }
-
-    function renderKeyDropdown()
-    {
-        keyHolder.replaceChildren(createDropdown(createKeyOptions(), draft.key === null ? "" : String(draft.key), (value) =>
-        {
-            draft.key = value === "" ? null : Number(value);
-        }));
-    }
+    const section = createElement("div", "preset-section");
+    const draft   = getDraft(task);
+    const nameEl  = createElement("input");
+    const button  = createElement("button", "", "Enregistrer le préréglage");
 
     nameEl.type        = "text";
     nameEl.placeholder = "Nom du préréglage";
@@ -780,7 +786,6 @@ function createSaveSection(task)
     nameEl.addEventListener("input", () =>
     {
         draft.name = nameEl.value;
-        renderKeyDropdown();
     });
 
     button.type = "button";
@@ -788,13 +793,10 @@ function createSaveSection(task)
 
     presetMessageEl = createElement("div", "preset-message");
 
-    renderKeyDropdown();
-
     section.append(
         createElement("div", "field-label", "Enregistrer ces réglages"),
-        createElement("div", "field-hint", "Partagé par tous les profils de ce jeu. Une touche du pavé numérique lance la simulation quand la barre F4 est ouverte."),
+        createElement("div", "field-hint", "Partagé par tous les profils de ce jeu. Pour le lancer avec une touche du pavé numérique : onglet Raccourcis."),
         nameEl,
-        keyHolder,
         button,
         presetMessageEl
     );

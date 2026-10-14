@@ -117,6 +117,17 @@ describe("description d'une tâche", () =>
         assert.ok(errors.length >= 2);
     });
 
+    it("accepte un réglage d'items avec quantité et refuse une valeur par défaut", () =>
+    {
+        const task = parseTask(taskWith([{ id: "items", type: "itemAmounts", label: "Items", filter: "smeltable", required: true }]));
+
+        assert.equal(task.parameters[0].type, "itemAmounts");
+
+        const withDefault = errorsOf(taskWith([{ id: "items", type: "itemAmounts", label: "Items", default: [] }]));
+
+        assert.match(withDefault[0], /itemAmounts/);
+    });
+
     it("accepte un manifeste de jeu valide et refuse une capacité en double", () =>
     {
         const capability = { id: "move-player", label: "Se déplacer", description: "Déplace le joueur" };
@@ -212,6 +223,49 @@ describe("valeurs des paramètres", () =>
     it("refuse des paramètres qui ne sont pas un objet", () =>
     {
         assert.equal(resolveParameterValues(task, "n'importe quoi").ok, false);
+    });
+
+    it("réglage d'items avec quantité : accepte des noms, des quantités ou « tout »", () =>
+    {
+        const amounts = parseTask(taskWith([{ id: "items", type: "itemAmounts", label: "Items", required: true }]));
+
+        const result = resolveParameterValues(amounts, { items: ["raw_iron", { itemId: "raw_copper", amount: 128 }, { itemId: "raw_gold", amount: null }] });
+
+        assert.deepEqual(result, {
+            ok:     true,
+            values: { items: [
+                { itemId: "raw_iron",   amount: null },
+                { itemId: "raw_copper", amount: 128 },
+                { itemId: "raw_gold",   amount: null }
+            ] }
+        });
+    });
+
+    it("réglage d'items avec quantité : refuse une quantité invalide, un doublon ou une liste vide", () =>
+    {
+        const amounts = parseTask(taskWith([{ id: "items", type: "itemAmounts", label: "Items", required: true }]));
+
+        for (const amount of [0, -3, 2.5, "5"])
+        {
+            assert.equal(resolveParameterValues(amounts, { items: [{ itemId: "raw_iron", amount }] }).ok, false, String(amount));
+        }
+
+        assert.equal(resolveParameterValues(amounts, { items: ["raw_iron", { itemId: "raw_iron", amount: 5 }] }).ok, false);
+        assert.equal(resolveParameterValues(amounts, { items: [] }).ok, false);
+        assert.equal(resolveParameterValues(amounts, { items: "raw_iron" }).ok, false);
+        assert.equal(resolveParameterValues(amounts, { items: [42] }).ok, false);
+    });
+
+    it("réglage d'items avec quantité : applique le catalogue du jeu", () =>
+    {
+        const amounts = parseTask(taskWith([{ id: "items", type: "itemAmounts", label: "Items", filter: "smeltable", required: true }]));
+        const catalog = createItemCatalog([
+            { id: "raw_iron", name: "Raw Iron", tags: ["smeltable"], stackSize: 64, burnSeconds: undefined },
+            { id: "coal",     name: "Coal",     tags: ["fuel"],      stackSize: 64, burnSeconds: 80 }
+        ]);
+
+        assert.equal(resolveParameterValues(amounts, { items: [{ itemId: "raw_iron", amount: 64 }] }, catalog).ok, true);
+        assert.equal(resolveParameterValues(amounts, { items: [{ itemId: "coal", amount: 64 }] }, catalog).ok, false);
     });
 
     it("ne prend pas un texte commençant par error: pour une erreur", () =>
@@ -386,7 +440,7 @@ describe("chargement des jeux", () =>
 
         const resolved = resolveParameterValues(task, { items: ["raw_iron"], fuel: ["coal"] });
 
-        assert.deepEqual(resolved, { ok: true, values: { items: ["raw_iron"], fuel: ["coal"], collectOutput: true } });
+        assert.deepEqual(resolved, { ok: true, values: { items: [{ itemId: "raw_iron", amount: null }], fuel: ["coal"], collectOutput: true } });
     });
 
     it("ignore une tâche invalide, la signale et charge les autres", async () =>

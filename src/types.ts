@@ -75,7 +75,48 @@ export type Preset =
     taskId: string;
     name:   string;
     values: ParameterValues;
-    key:    number | null;
+};
+
+
+
+export type ShortcutPanelId = "notes" | "tasks" | "shortcuts";
+
+
+
+export type ShortcutAction =
+    | { type: "preset"; presetId: string }
+    | { type: "note";   noteId: string }
+    | { type: "panel";  panelId: ShortcutPanelId };
+
+
+
+export type Binding =
+{
+    key:    number;
+    action: ShortcutAction;
+};
+
+
+
+export type ShortcutsFileData =
+{
+    bindingsByProfile: Record<string, Binding[]>;
+};
+
+
+
+export type ShortcutOption =
+{
+    value: string;
+    label: string;
+};
+
+
+
+export type ShortcutSlot =
+{
+    key:   number;
+    value: string;
 };
 
 

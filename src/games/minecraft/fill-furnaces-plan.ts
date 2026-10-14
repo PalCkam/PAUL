@@ -1,4 +1,5 @@
 import type { ItemDefinition, ParameterValues } from "../../tasks/types";
+import { isRecord } from "../../utils";
 import { ACCEPTED_TAG, COOK_SECONDS, FURNACE_LABELS } from "./furnace-types";
 import type
 {
@@ -76,6 +77,31 @@ function createContext(items: ItemDefinition[]): Context
 function asStringList(value: unknown): string[]
 {
     return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : [];
+}
+
+
+
+function asItemRequests(value: unknown): { itemId: string; amount: number | null }[]
+{
+    if (!Array.isArray(value))
+    {
+        return [];
+    }
+
+    return value.flatMap((entry: unknown) =>
+    {
+        if (typeof entry === "string")
+        {
+            return [{ itemId: entry, amount: null }];
+        }
+
+        if (isRecord(entry) && typeof entry.itemId === "string")
+        {
+            return [{ itemId: entry.itemId, amount: typeof entry.amount === "number" ? entry.amount : null }];
+        }
+
+        return [];
+    });
 }
 
 
@@ -430,7 +456,8 @@ function findInventoryProblem(
 export function planFillFurnaces(values: ParameterValues, environment: FurnaceEnvironment, items: ItemDefinition[]): FurnacePlan
 {
     const context       = createContext(items);
-    const selectedItems = asStringList(values.items);
+    const requests      = asItemRequests(values.items);
+    const selectedItems = requests.map((request) => request.itemId);
     const selectedFuels = asStringList(values.fuel);
     const maxFurnaces   = typeof values.maxFurnaces === "number" ? values.maxFurnaces : undefined;
     const maxRounds     = typeof values.maxRounds === "number" ? values.maxRounds : undefined;
@@ -452,7 +479,7 @@ export function planFillFurnaces(values: ParameterValues, environment: FurnaceEn
 
     const remaining = new Map<string, number>();
 
-    for (const itemId of selectedItems)
+    for (const { itemId, amount } of requests)
     {
         const have = environment.inventory[itemId] ?? 0;
 
@@ -466,7 +493,12 @@ export function planFillFurnaces(values: ParameterValues, environment: FurnaceEn
         }
         else
         {
-            remaining.set(itemId, have);
+            if (amount !== null && amount > have)
+            {
+                notes.push({ level: "warning", message: `${context.nameOf(itemId)} : ${amount} demandés, ${have} dans l'inventaire.` });
+            }
+
+            remaining.set(itemId, amount === null ? have : Math.min(amount, have));
         }
     }
 
@@ -566,15 +598,15 @@ export function planFillFurnaces(values: ParameterValues, environment: FurnaceEn
 
         if (!collectOutput && rounds.length >= 1)
         {
-            notes.push({ level: "warning", message: `Récupération désactivée : un seul tour possible. Reste dans l'inventaire : ${text}.` });
+            notes.push({ level: "warning", message: `Récupération désactivée : un seul tour possible. Non cuit : ${text}.` });
         }
         else if (maxRounds !== undefined && rounds.length >= maxRounds)
         {
-            notes.push({ level: "warning", message: `Limite de ${maxRounds} tour(s) atteinte. Reste dans l'inventaire : ${text}.` });
+            notes.push({ level: "warning", message: `Limite de ${maxRounds} tour(s) atteinte. Non cuit : ${text}.` });
         }
         else
         {
-            notes.push({ level: "warning", message: `Plan incomplet (carburant insuffisant ou aucun four disponible). Reste dans l'inventaire : ${text}.` });
+            notes.push({ level: "warning", message: `Plan incomplet (carburant insuffisant ou aucun four disponible). Non cuit : ${text}.` });
         }
     }
 

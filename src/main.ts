@@ -6,29 +6,57 @@ import { GAME_MODULES } from "./modules";
 import
 {
     migrateLegacyProfiles,
+    readLegacyPresetKeys,
     readNotesFile,
     readPresetsFile,
     readProfilesFile,
+    readShortcutsFile,
     readUsageFile,
     writeNotesFile,
     writePresetsFile,
     writeProfilesFile,
+    writeShortcutsFile,
     writeUsageFile
 } from "./store";
 import { linkLegacyProfiles } from "./profiles";
-import { parsePresetMeta, toOverlayCard, upsertPreset } from "./presets";
+import { parsePresetName, toOverlayCard, upsertPreset } from "./presets";
+import
+{
+    PANEL_OPTIONS,
+    SHORTCUT_KEYS,
+    actionToValue,
+    bindingsFromLegacyKeys,
+    parseActionValue,
+    setBinding
+} from "./shortcuts";
 import { loadGames } from "./tasks/loader";
 import type { LoadResult } from "./tasks/types";
 import { createItemCatalog, resolveParameterValues } from "./tasks/values";
 import { getTaskImplementation } from "./games/registry";
-import type { LaunchEntry, LaunchPayload, Note, NoteChanges, OverlayCard, PinnedNoteView, Preset, UsageData } from "./types";
+import type
+{
+    Binding,
+    LaunchEntry,
+    LaunchPayload,
+    Note,
+    NoteChanges,
+    OverlayCard,
+    PinnedNoteView,
+    Preset,
+    ShortcutAction,
+    ShortcutOption,
+    UsageData
+} from "./types";
 import { createLock, isNonEmptyString, isRecord } from "./utils";
 import
 {
     createLauncherWindow,
+    closePanelOf,
     ensureOverlayLayer,
     getLauncherWindow,
+    getOpenPanels,
     hidePanel,
+    hideTopPanel,
     isDockVisible,
     isPanelVisible,
     minimizeLauncher,
@@ -51,8 +79,8 @@ let pinnedNoteIds:      string[]      = [];
 let hasLaunched                       = false;
 let loadedGames:        LoadResult    = { games: [], errors: [] };
 
-let lastOverlayCard:      OverlayCard | null = null;
-let registeredPresetKeys: number[]           = [];
+let lastOverlayCard:        OverlayCard | null = null;
+let registeredShortcutKeys: number[]           = [];
 
 const lastScenarioByTask = new Map<string, string>();
 
@@ -64,6 +92,7 @@ const lastScenarioByTask = new Map<string, string>();
 
 const withNotesLock   = createLock();
 const withPresetsLock = createLock();
+const withShortcutsLock = createLock();
 
 
 
@@ -126,7 +155,7 @@ async function setCurrentProfile(profileName: string | null): Promise<void>
 
     showOverlayCard(null);
 
-    await refreshPresetShortcuts();
+    await refreshShortcuts();
 }
 
 
@@ -186,7 +215,7 @@ function openInterface(): void
 
     globalShortcut.register(CLOSE_SHORTCUT, handleEscape);
 
-    void refreshPresetShortcuts();
+    void refreshShortcuts();
 }
 
 
@@ -198,7 +227,7 @@ function closeInterface(): void
 
     globalShortcut.unregister(CLOSE_SHORTCUT);
 
-    unregisterPresetShortcuts();
+    unregisterShortcuts();
 }
 
 
@@ -207,7 +236,7 @@ function handleEscape(): void
 {
     if (isPanelVisible())
     {
-        hidePanel();
+        hideTopPanel();
         return;
     }
 
@@ -253,11 +282,32 @@ async function getCurrentPresets(): Promise<Preset[]>
 
 
 
+async function getCurrentBindings(): Promise<Binding[]>
+{
+    if (!currentProfileName)
+    {
+        return [];
+    }
+
+    const data = await readShortcutsFile();
+
+    return data.bindingsByProfile[currentProfileName] ?? [];
+}
+
+
+
 function showOverlayCard(card: OverlayCard | null): void
 {
     lastOverlayCard = card;
 
     sendToOverlay("overlay:taskReport", card);
+}
+
+
+
+function showMessageCard(title: string, headline: string): void
+{
+    showOverlayCard({ title, headline, stats: [], notes: [] });
 }
 
 
@@ -269,7 +319,7 @@ async function runPreset(preset: Preset): Promise<void>
 
     if (!game || !task)
     {
-        showOverlayCard({ title: preset.name, headline: "Tâche introuvable pour ce jeu.", stats: [], notes: [] });
+        showMessageCard(preset.name, "Tâche introuvable pour ce jeu.");
         return;
     }
 
@@ -290,7 +340,7 @@ async function runPreset(preset: Preset): Promise<void>
 
     if (!implementation)
     {
-        showOverlayCard({ title: preset.name, headline: "Aucune simulation disponible pour cette tâche.", stats: [], notes: [] });
+        showMessageCard(preset.name, "Aucune simulation disponible pour cette tâche.");
         return;
     }
 
@@ -302,63 +352,175 @@ async function runPreset(preset: Preset): Promise<void>
 
 
 
-async function runPresetOnKey(key: number): Promise<void>
+async function togglePinnedNote(noteId: string): Promise<boolean>
 {
+    const notes = await getCurrentNotes();
+
+    if (!notes.some((note: Note) => note.id === noteId))
+    {
+        return false;
+    }
+
+    pinnedNoteIds = pinnedNoteIds.includes(noteId)
+        ? pinnedNoteIds.filter((id: string) => id !== noteId)
+        : [...pinnedNoteIds, noteId];
+
+    await pushPinnedNotes();
+
+    return true;
+}
+
+
+
+async function actionExists(action: ShortcutAction): Promise<boolean>
+{
+    if (action.type === "panel")
+    {
+        return true;
+    }
+
+    if (action.type === "note")
+    {
+        const notes = await getCurrentNotes();
+
+        return notes.some((note: Note) => note.id === action.noteId);
+    }
+
     const presets = await getCurrentPresets();
-    const preset  = presets.find((candidate) => candidate.key === key);
+
+    return presets.some((preset: Preset) => preset.id === action.presetId);
+}
+
+
+
+async function executeAction(action: ShortcutAction): Promise<void>
+{
+    if (action.type === "panel")
+    {
+        togglePanel(action.panelId);
+        return;
+    }
+
+    if (action.type === "note")
+    {
+        if (!(await togglePinnedNote(action.noteId)))
+        {
+            showMessageCard("Raccourci", "Note introuvable.");
+        }
+
+        return;
+    }
+
+    const presets = await getCurrentPresets();
+    const preset  = presets.find((candidate: Preset) => candidate.id === action.presetId);
 
     if (preset)
     {
         await runPreset(preset);
     }
+    else
+    {
+        showMessageCard("Raccourci", "Préréglage introuvable.");
+    }
 }
 
 
 
-function unregisterPresetShortcuts(): void
+async function runShortcut(key: number): Promise<void>
 {
-    for (const key of registeredPresetKeys)
+    const bindings = await getCurrentBindings();
+    const binding  = bindings.find((candidate: Binding) => candidate.key === key);
+
+    if (binding)
+    {
+        await executeAction(binding.action);
+    }
+}
+
+
+
+function unregisterShortcuts(): void
+{
+    for (const key of registeredShortcutKeys)
     {
         globalShortcut.unregister(`num${key}`);
     }
 
-    registeredPresetKeys = [];
+    registeredShortcutKeys = [];
 }
 
 
 
-async function refreshPresetShortcuts(): Promise<void>
+async function refreshShortcuts(): Promise<void>
 {
-    unregisterPresetShortcuts();
+    unregisterShortcuts();
 
     if (!isDockVisible())
     {
         return;
     }
 
-    const presets = await getCurrentPresets();
+    const bindings = await getCurrentBindings();
 
     if (!isDockVisible())
     {
         return;
     }
 
-    unregisterPresetShortcuts();
+    unregisterShortcuts();
 
-    const keys = [...new Set(presets.map((preset) => preset.key).filter((key): key is number => key !== null))];
-
-    for (const key of keys)
+    for (const binding of bindings)
     {
-        if (globalShortcut.register(`num${key}`, () => void runPresetOnKey(key)))
+        if (globalShortcut.register(`num${binding.key}`, () => void runShortcut(binding.key)))
         {
-            registeredPresetKeys.push(key);
+            registeredShortcutKeys.push(binding.key);
         }
     }
 
     if (globalShortcut.register("num0", () => showOverlayCard(null)))
     {
-        registeredPresetKeys.push(0);
+        registeredShortcutKeys.push(0);
     }
+}
+
+
+
+async function purgeBindings(shouldRemove: (profileName: string, binding: Binding) => boolean): Promise<void>
+{
+    await withShortcutsLock(async () =>
+    {
+        const data = await readShortcutsFile();
+
+        let changed = false;
+
+        for (const [profileName, bindings] of Object.entries(data.bindingsByProfile))
+        {
+            const kept = bindings.filter((binding: Binding) => !shouldRemove(profileName, binding));
+
+            if (kept.length === bindings.length)
+            {
+                continue;
+            }
+
+            changed = true;
+
+            if (kept.length === 0)
+            {
+                delete data.bindingsByProfile[profileName];
+            }
+            else
+            {
+                data.bindingsByProfile[profileName] = kept;
+            }
+        }
+
+        if (changed)
+        {
+            await writeShortcutsFile(data);
+        }
+    });
+
+    await refreshShortcuts();
 }
 
 
@@ -524,6 +686,8 @@ ipcMain.handle("profiles:delete", async (_event, gameName: unknown) =>
         await writeNotesFile(notesData);
     });
 
+    await purgeBindings((profileName) => profileName === gameName);
+
     if (currentProfileName === gameName)
     {
         await setCurrentProfile(null);
@@ -592,11 +756,18 @@ ipcMain.handle("dock:openModule", (_event, moduleId: unknown) =>
 
 
 
-ipcMain.handle("panel:close", () =>
+ipcMain.handle("panel:close", (event) =>
 {
-    hidePanel();
+    closePanelOf(event.sender);
 
     return { ok: true };
+});
+
+
+
+ipcMain.handle("dock:getOpenPanels", () =>
+{
+    return getOpenPanels();
 });
 
 
@@ -696,6 +867,13 @@ ipcMain.handle("notes:delete", async (_event, noteId: unknown) =>
         return notes.filter((note: Note) => note.id !== noteId);
     });
 
+    const profileOfNote = currentProfileName;
+
+    await purgeBindings((profileName, binding) =>
+    {
+        return profileName === profileOfNote && binding.action.type === "note" && binding.action.noteId === noteId;
+    });
+
     if (pinnedNoteIds.includes(noteId))
     {
         pinnedNoteIds = pinnedNoteIds.filter((id: string) => id !== noteId);
@@ -771,7 +949,7 @@ ipcMain.handle("presets:list", async () =>
 
 
 
-ipcMain.handle("presets:save", async (_event, taskId: unknown, name: unknown, values: unknown, key: unknown) =>
+ipcMain.handle("presets:save", async (_event, taskId: unknown, name: unknown, values: unknown) =>
 {
     const game = getCurrentGame();
     const task = game?.tasks.find((candidate) => candidate.id === taskId);
@@ -781,12 +959,12 @@ ipcMain.handle("presets:save", async (_event, taskId: unknown, name: unknown, va
         return { ok: false, errors: [{ parameterId: null, message: "Tâche inconnue pour ce profil." }] };
     }
 
-    const meta     = parsePresetMeta(name, key);
-    const resolved = resolveParameterValues(task, values, createItemCatalog(game.items));
+    const parsedName = parsePresetName(name);
+    const resolved   = resolveParameterValues(task, values, createItemCatalog(game.items));
 
-    if (!meta.ok || !resolved.ok)
+    if (!parsedName.ok || !resolved.ok)
     {
-        return { ok: false, errors: [...(meta.ok ? [] : meta.errors), ...(resolved.ok ? [] : resolved.errors)] };
+        return { ok: false, errors: [...(parsedName.ok ? [] : parsedName.errors), ...(resolved.ok ? [] : resolved.errors)] };
     }
 
     const result = await withPresetsLock(async () =>
@@ -794,7 +972,7 @@ ipcMain.handle("presets:save", async (_event, taskId: unknown, name: unknown, va
         const data    = await readPresetsFile();
         const updated = upsertPreset(
             data.presetsByGame[game.id] ?? [],
-            { taskId: task.id, name: meta.meta.name, values: resolved.values, key: meta.meta.key },
+            { taskId: task.id, name: parsedName.name, values: resolved.values },
             () => `preset_${randomUUID()}`
         );
 
@@ -805,9 +983,7 @@ ipcMain.handle("presets:save", async (_event, taskId: unknown, name: unknown, va
         return updated;
     });
 
-    await refreshPresetShortcuts();
-
-    return { ok: true, presets: result.presets, created: result.created, notice: result.notice };
+    return { ok: true, presets: result.presets, created: result.created };
 });
 
 
@@ -833,9 +1009,94 @@ ipcMain.handle("presets:delete", async (_event, presetId: unknown) =>
         return next;
     });
 
-    await refreshPresetShortcuts();
+    await purgeBindings((_profileName, binding) => binding.action.type === "preset" && binding.action.presetId === presetId);
 
     return { ok: true, presets };
+});
+
+
+
+ipcMain.handle("shortcuts:context", async () =>
+{
+    const game     = getCurrentGame();
+    const presets  = await getCurrentPresets();
+    const notes    = await getCurrentNotes();
+    const bindings = await getCurrentBindings();
+    const taskName = new Map((game ? game.tasks : []).map((task) => [task.id, task.name]));
+
+    const options: ShortcutOption[] =
+    [
+        ...presets.map((preset: Preset) => ({
+            value: actionToValue({ type: "preset", presetId: preset.id }),
+            label: `Lancer : ${taskName.get(preset.taskId) ?? preset.taskId} · ${preset.name}`
+        })),
+        ...notes.map((note: Note) => ({
+            value: actionToValue({ type: "note", noteId: note.id }),
+            label: `Épingler / désépingler : ${note.title.trim() || "Sans titre"}`
+        })),
+        ...PANEL_OPTIONS
+    ];
+
+    const slots = SHORTCUT_KEYS.map((key: number) =>
+    {
+        const binding = bindings.find((candidate: Binding) => candidate.key === key);
+
+        return { key, value: binding ? actionToValue(binding.action) : "" };
+    });
+
+    return {
+        profileName: currentProfileName,
+        game:        game ? { id: game.id, name: game.name } : null,
+        slots,
+        options
+    };
+});
+
+
+
+ipcMain.handle("shortcuts:set", async (_event, key: unknown, value: unknown) =>
+{
+    if (!currentProfileName)
+    {
+        return { ok: false, message: "Aucun profil actif." };
+    }
+
+    if (typeof key !== "number" || !SHORTCUT_KEYS.includes(key))
+    {
+        return { ok: false, message: "Touche invalide (pavé numérique 1 à 9)." };
+    }
+
+    const profileName = currentProfileName;
+
+    let action: ShortcutAction | null = null;
+
+    if (value !== "")
+    {
+        action = parseActionValue(value);
+
+        if (!action)
+        {
+            return { ok: false, message: "Action inconnue." };
+        }
+
+        if (!(await actionExists(action)))
+        {
+            return { ok: false, message: "Cette action n'existe plus." };
+        }
+    }
+
+    await withShortcutsLock(async () =>
+    {
+        const data = await readShortcutsFile();
+
+        data.bindingsByProfile[profileName] = setBinding(data.bindingsByProfile[profileName] ?? [], key, action);
+
+        await writeShortcutsFile(data);
+    });
+
+    await refreshShortcuts();
+
+    return { ok: true };
 });
 
 
@@ -944,6 +1205,19 @@ else
                 profiles:      linkLegacyProfiles(stored.profiles, games),
                 launchHistory: stored.launchHistory
             });
+        }
+
+        const legacyKeys = await readLegacyPresetKeys();
+
+        if (legacyKeys.length > 0)
+        {
+            const profiles  = (await readProfilesFile()).profiles;
+            const shortcuts = await readShortcutsFile();
+
+            shortcuts.bindingsByProfile = bindingsFromLegacyKeys(legacyKeys, profiles, shortcuts.bindingsByProfile);
+
+            await writeShortcutsFile(shortcuts);
+            await writePresetsFile(await readPresetsFile());
         }
 
         createLauncherWindow(() =>

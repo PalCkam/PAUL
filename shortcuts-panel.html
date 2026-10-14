@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'self'">
+    <title>PAUL Raccourcis</title>
+
+    <style>
+        html,
+        body
+        {
+            margin:      0;
+            padding:     0;
+            width:       100%;
+            height:      100%;
+            font-family: Inter, system-ui, sans-serif;
+            color:       #f1efe9;
+            overflow:    hidden;
+        }
+
+
+        html
+        {
+            background: transparent;
+        }
+
+
+        body
+        {
+            box-sizing:    border-box;
+            background:    rgba(12, 12, 12, 0.95);
+            border:        1px solid rgba(127, 127, 127, 0.4);
+            border-radius: 12px;
+        }
+
+
+        .panel-root
+        {
+            display:        flex;
+            flex-direction: column;
+            padding:        16px;
+            gap:            14px;
+            height:         100%;
+            box-sizing:     border-box;
+            overflow-y:     auto;
+        }
+
+
+        .panel-top
+        {
+            display:         flex;
+            justify-content: space-between;
+            align-items:     flex-start;
+            gap:             8px;
+        }
+
+
+        .panel-header
+        {
+            font-size:      0.9rem;
+            font-weight:    600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color:          #b8b4ab;
+        }
+
+
+        .panel-profile
+        {
+            margin-top: 2px;
+            font-size:  0.8rem;
+            color:      #8d887e;
+        }
+
+
+        .panel-empty,
+        .panel-hint
+        {
+            font-size:   0.82rem;
+            line-height: 1.4;
+            color:       #8d887e;
+        }
+
+
+        .panel-message
+        {
+            font-size: 0.82rem;
+            color:     #e74c3c;
+        }
+
+
+        .slot-list
+        {
+            display:        flex;
+            flex-direction: column;
+            gap:            10px;
+        }
+
+
+        .slot-row
+        {
+            display:        flex;
+            flex-direction: column;
+            gap:            4px;
+        }
+
+
+        .slot-key
+        {
+            font-size:   0.85rem;
+            font-weight: 600;
+        }
+
+
+        .is-hidden
+        {
+            display: none !important;
+        }
+
+
+        .dropdown
+        {
+            display:        flex;
+            flex-direction: column;
+            gap:            4px;
+        }
+
+
+        .dropdown-toggle
+        {
+            width:         100%;
+            box-sizing:    border-box;
+            text-align:    left;
+            border:        1px solid rgba(127, 127, 127, 0.35);
+            background:    rgba(24, 24, 24, 1);
+            padding:       6px 8px;
+            font-size:     0.85rem;
+        }
+
+
+        .dropdown-list
+        {
+            display:        flex;
+            flex-direction: column;
+            gap:            2px;
+            max-height:     200px;
+            overflow-y:     auto;
+            border-radius:  4px;
+            border:         1px solid rgba(127, 127, 127, 0.25);
+            padding:        4px;
+        }
+
+
+        .dropdown-option
+        {
+            text-align:  left;
+            background:  transparent;
+            padding:     5px 6px;
+            font-size:   0.8rem;
+            color:       #d1ccc2;
+        }
+
+
+        .dropdown-option.is-selected
+        {
+            background: rgba(52, 152, 219, 0.25);
+            color:      #f1efe9;
+        }
+
+
+        button
+        {
+            border-radius: 4px;
+            border:        none;
+            padding:       6px 10px;
+            font-family:   inherit;
+            font-size:     0.8rem;
+            cursor:        pointer;
+            background:    #3498db;
+            color:         #f1efe9;
+        }
+
+
+        button.secondary
+        {
+            background: rgba(127, 127, 127, 0.3);
+        }
+
+
+        button.secondary:hover:not(:disabled)
+        {
+            background: rgba(127, 127, 127, 0.5);
+        }
+
+
+        .dropdown-toggle:hover:not(:disabled),
+        .dropdown-option:hover:not(:disabled)
+        {
+            background: rgba(52, 152, 219, 0.2);
+        }
+    </style>
+</head>
+
+
+<body>
+    <div class="panel-root">
+        <div class="panel-top">
+            <div>
+                <div class="panel-header">PAUL · Raccourcis</div>
+                <div id="contextLabel" class="panel-profile"></div>
+            </div>
+
+            <button id="closeButton" class="secondary" type="button" aria-label="Fermer le panneau">✕</button>
+        </div>
+
+        <div class="panel-hint">
+            Chaque touche du pavé numérique peut lancer un préréglage, épingler une note ou ouvrir un panneau.
+            Elles ne sont actives que lorsque la barre F4 est affichée, et propres à ce profil. Pavé 0 : fermer la carte affichée dans le jeu.
+        </div>
+
+        <div id="slotList" class="slot-list"></div>
+
+        <div id="message" class="panel-message"></div>
+    </div>
+
+    <script src="./dropdown.js"></script>
+    <script src="./shortcuts-panel.js"></script>
+</body>
+</html>

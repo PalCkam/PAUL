@@ -1,4 +1,12 @@
-export type ParameterValue = string | number | boolean | string[];
+export type ItemAmount =
+{
+    itemId: string;
+    amount: number | null;
+};
+
+
+
+export type ParameterValue = string | number | boolean | string[] | ItemAmount[];
 
 export type ParameterValues = Record<string, ParameterValue>;
 
@@ -77,13 +85,23 @@ export type ItemsParameter = ParameterBase &
 
 
 
+export type ItemAmountsParameter = ParameterBase &
+{
+    type:    "itemAmounts";
+    filter:  string | undefined;
+    default: undefined;
+};
+
+
+
 export type TaskParameter =
     | TextParameter
     | NumberParameter
     | BooleanParameter
     | ChoiceParameter
     | ItemParameter
-    | ItemsParameter;
+    | ItemsParameter
+    | ItemAmountsParameter;
 
 
 

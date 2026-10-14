@@ -3,7 +3,9 @@ import fs        from "node:fs/promises";
 import path      from "node:path";
 
 import type { ParameterValues } from "./tasks/types";
-import type { GameProfile, LaunchEntry, Note, NotesFileData, Preset, PresetsFileData, ProfilesFileData, UsageData } from "./types";
+import { parseBinding } from "./shortcuts";
+import type { LegacyPresetKey } from "./shortcuts";
+import type { Binding, GameProfile, LaunchEntry, Note, NotesFileData, Preset, PresetsFileData, ProfilesFileData, ShortcutsFileData, UsageData } from "./types";
 import { isNonEmptyString, isRecord } from "./utils";
 
 
@@ -32,6 +34,13 @@ function getNotesFilePath(): string
 function getPresetsFilePath(): string
 {
     return path.join(getDataDirectoryPath(), "presets.json");
+}
+
+
+
+function getShortcutsFilePath(): string
+{
+    return path.join(getDataDirectoryPath(), "shortcuts.json");
 }
 
 
@@ -152,14 +161,11 @@ function toPreset(value: unknown): Preset | null
         return null;
     }
 
-    const validKey = typeof value.key === "number" && Number.isInteger(value.key) && value.key >= 1 && value.key <= 9;
-
     return {
         id:     value.id,
         taskId: value.taskId,
         name:   value.name.trim(),
-        values: value.values as ParameterValues,
-        key:    validKey ? (value.key as number) : null
+        values: value.values as ParameterValues
     };
 }
 
@@ -270,6 +276,63 @@ export async function readPresetsFile(): Promise<PresetsFileData>
 export function writePresetsFile(data: PresetsFileData): Promise<void>
 {
     return writeJsonAtomic(getPresetsFilePath(), data);
+}
+
+
+
+export async function readShortcutsFile(): Promise<ShortcutsFileData>
+{
+    const parsed = await readJson(getShortcutsFilePath());
+
+    if (!isRecord(parsed) || !isRecord(parsed.bindingsByProfile))
+    {
+        return { bindingsByProfile: {} };
+    }
+
+    const bindingsByProfile: Record<string, Binding[]> = {};
+
+    for (const [profileName, bindings] of Object.entries(parsed.bindingsByProfile))
+    {
+        bindingsByProfile[profileName] = Array.isArray(bindings) ? compact(bindings.map(parseBinding)) : [];
+    }
+
+    return { bindingsByProfile };
+}
+
+
+
+export function writeShortcutsFile(data: ShortcutsFileData): Promise<void>
+{
+    return writeJsonAtomic(getShortcutsFilePath(), data);
+}
+
+
+
+export async function readLegacyPresetKeys(): Promise<LegacyPresetKey[]>
+{
+    const parsed = await readJson(getPresetsFilePath());
+
+    if (!isRecord(parsed) || !isRecord(parsed.presetsByGame))
+    {
+        return [];
+    }
+
+    const legacy: LegacyPresetKey[] = [];
+
+    for (const [gameId, presets] of Object.entries(parsed.presetsByGame))
+    {
+        for (const preset of Array.isArray(presets) ? presets : [])
+        {
+            const hasKey = isRecord(preset) && typeof preset.key === "number" && Number.isInteger(preset.key) && preset.key >= 1 && preset.key <= 9;
+
+            if (hasKey && isNonEmptyString((preset as Record<string, unknown>).id))
+            {
+                legacy.push({ gameId, presetId: (preset as Record<string, string>).id, key: (preset as Record<string, number>).key });
+            }
+        }
+    }
+
+    return legacy;
 }
 
 

@@ -7,9 +7,9 @@
     [
         {
             "id": "items",
-            "type": "items",
+            "type": "itemAmounts",
             "label": "Items à cuire",
-            "description": "Seuls ces items sont mis dans les fours.",
+            "description": "Choisis les items et la quantité de chacun. Vide = tout ce qui est dans l'inventaire.",
             "filter": "smeltable",
             "required": true
         },

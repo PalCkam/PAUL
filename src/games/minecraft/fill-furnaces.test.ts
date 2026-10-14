@@ -92,6 +92,51 @@ describe("plan de remplissage des fours", () =>
         assert.equal(plan.totalSeconds, 130);
     });
 
+    it("ne cuit que la quantité demandée pour un item", () =>
+    {
+        const plan = planFillFurnaces(values({ items: [{ itemId: "raw_iron", amount: 128 }] }), scenario("full"), ITEMS);
+
+        assert.equal(plan.rounds.length, 1);
+        assert.deepEqual(counts(plan), Array(8).fill(16));
+        assert.equal(plan.totalSeconds, 160);
+        assert.deepEqual(plan.itemTotals, [{ itemId: "raw_iron", count: 128 }]);
+        assert.deepEqual(plan.fuelTotals, [{ itemId: "coal", count: 16 }]);
+        assert.deepEqual(plan.leftovers, []);
+        assert.deepEqual(plan.notes, []);
+    });
+
+    it("règle la quantité item par item : une quantité pour l'un, tout pour l'autre", () =>
+    {
+        const plan = planFillFurnaces(
+            values({ items: [{ itemId: "raw_iron", amount: 100 }, { itemId: "raw_copper", amount: null }] }),
+            scenario("mixed"),
+            ITEMS
+        );
+
+        const total = (itemId: string): number | undefined => plan.itemTotals.find((stack) => stack.itemId === itemId)?.count;
+
+        assert.equal(total("raw_iron"), 100);
+        assert.equal(total("raw_copper"), 100);
+        assert.deepEqual(plan.leftovers, []);
+    });
+
+    it("signale une quantité demandée supérieure à l'inventaire et cuit ce qui est disponible", () =>
+    {
+        const plan = planFillFurnaces(values({ items: [{ itemId: "raw_iron", amount: 500 }] }), environment({ raw_iron: 100, coal: 50 }), ITEMS);
+
+        assert.ok(plan.notes.some((note) => note.message === "Raw Iron : 500 demandés, 100 dans l'inventaire."));
+        assert.deepEqual(plan.itemTotals, [{ itemId: "raw_iron", count: 100 }]);
+    });
+
+    it("une quantité plus petite que l'inventaire ne laisse rien de « non cuit »", () =>
+    {
+        const plan = planFillFurnaces(values({ items: [{ itemId: "raw_iron", amount: 10 }] }), environment({ raw_iron: 1000, coal: 50 }), ITEMS);
+
+        assert.deepEqual(plan.itemTotals, [{ itemId: "raw_iron", count: 10 }]);
+        assert.deepEqual(plan.leftovers, []);
+        assert.deepEqual(plan.notes, []);
+    });
+
     it("n'utilise pas plus de fours que d'items", () =>
     {
         const plan = planFillFurnaces(values(), environment({ raw_iron: 3, coal: 5 }), ITEMS);
@@ -108,7 +153,7 @@ describe("plan de remplissage des fours", () =>
         assert.deepEqual(plan.fuelTotals, [{ itemId: "coal", count: 20 }]);
         assert.deepEqual(plan.leftovers, [{ itemId: "raw_iron", count: 352 }]);
         assert.ok(plan.notes.some((note) => note.message.includes("Carburant insuffisant au tour 1 : 1 four(s) chargé(s) partiellement, 5 sans carburant")));
-        assert.ok(plan.notes.some((note) => note.message.includes("Reste dans l'inventaire")));
+        assert.ok(plan.notes.some((note) => note.message.includes("Non cuit : Raw Iron ×352")));
     });
 
     it("respecte la limite de fours", () =>

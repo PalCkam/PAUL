@@ -296,9 +296,22 @@ function parseParameter(raw: unknown, position: number, errors: string[]): TaskP
             break;
         }
 
+        case "itemAmounts":
+        {
+            const filter = readOptionalText(raw, "filter", problems);
+
+            if (raw.default !== undefined)
+            {
+                problems.push(`"default" n'est pas pris en charge pour "itemAmounts".`);
+            }
+
+            parameter = { ...base, type: "itemAmounts", filter, default: undefined };
+            break;
+        }
+
         default:
         {
-            problems.push(`"type" doit valoir text, number, boolean, choice, item ou items.`);
+            problems.push(`"type" doit valoir text, number, boolean, choice, item, items ou itemAmounts.`);
         }
     }
 

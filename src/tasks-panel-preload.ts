@@ -19,9 +19,9 @@ contextBridge.exposeInMainWorld("tasksPanelApi",
         return ipcRenderer.invoke("presets:list");
     },
 
-    savePreset(taskId: string, name: string, values: Record<string, unknown>, key: number | null)
+    savePreset(taskId: string, name: string, values: Record<string, unknown>)
     {
-        return ipcRenderer.invoke("presets:save", taskId, name, values, key);
+        return ipcRenderer.invoke("presets:save", taskId, name, values);
     },
 
     deletePreset(presetId: string)

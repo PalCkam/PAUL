@@ -101,7 +101,7 @@ export function describeFurnacePlan(plan: FurnacePlan, items: ItemDefinition[]):
             { label: "Fours utilisés", value: String(furnacesUsed.size) },
             { label: "Items à cuire",  value: plan.itemTotals.map(stackOf).join(", ") },
             { label: "Carburant",      value: plan.fuelTotals.length > 0 ? plan.fuelTotals.map(stackOf).join(", ") : "aucun à ajouter" },
-            { label: "Reste dans l'inventaire", value: plan.leftovers.length > 0 ? plan.leftovers.map(stackOf).join(", ") : "rien" }
+            { label: "Non cuit", value: plan.leftovers.length > 0 ? plan.leftovers.map(stackOf).join(", ") : "rien" }
         ],
         steps,
         notes

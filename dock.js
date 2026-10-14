@@ -20,6 +20,14 @@ const ICONS =
             <path d="M4 16l2 2 3-3"></path>
             <path d="M12 16h8"></path>
         </svg>
+    `,
+
+    shortcuts: `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="6" width="18" height="12" rx="2"></rect>
+            <path d="M7 10h.01M11 10h.01M15 10h.01M7 14h10"></path>
+        </svg>
     `
 };
 
@@ -31,6 +39,8 @@ function createModuleButton(module)
 
     button.className = "dock-button";
     button.type      = "button";
+
+    button.setAttribute("data-module", module.id);
     button.title     = module.label;
 
     button.insertAdjacentHTML("afterbegin", ICONS[module.icon] ?? "");
@@ -47,7 +57,20 @@ function createModuleButton(module)
 }
 
 
-window.dockApi.getModules().then((modules) =>
+function markOpenModules(openIds)
+{
+    for (const button of dockEl.querySelectorAll(".dock-button"))
+    {
+        button.classList.toggle("is-open", openIds.includes(button.getAttribute("data-module")));
+    }
+}
+
+
+window.dockApi.onOpenPanelsChanged(markOpenModules);
+
+window.dockApi.getModules().then(async (modules) =>
 {
     dockEl.replaceChildren(...modules.map(createModuleButton));
+
+    markOpenModules(await window.dockApi.getOpenPanels());
 });

@@ -10,5 +10,6 @@ export type PaulModule =
 export const GAME_MODULES: PaulModule[] =
 [
     { id: "notes", label: "Notes", icon: "notes" },
-    { id: "tasks", label: "Tâches", icon: "tasks" }
+    { id: "tasks", label: "Tâches", icon: "tasks" },
+    { id: "shortcuts", label: "Raccourcis", icon: "shortcuts" }
 ];
