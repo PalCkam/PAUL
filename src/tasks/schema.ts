@@ -4,6 +4,7 @@ import type
     CapabilityDefinition,
     ChoiceOption,
     GameManifest,
+    ItemDefinition,
     ParseResult,
     TaskDefinition,
     TaskParameter
@@ -13,6 +14,7 @@ import type
 
 const SLUG_PATTERN      = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const PARAMETER_PATTERN = /^[a-zA-Z][a-zA-Z0-9]*$/;
+const ITEM_PATTERN      = /^[a-z0-9_]+$/;
 
 
 
@@ -435,6 +437,61 @@ export function parseTaskDefinition(raw: unknown): ParseResult<TaskDefinition>
     }
 
     return { value: { id, name, description, requires, parameters }, errors: [] };
+}
+
+
+
+export function parseItems(raw: unknown): ParseResult<ItemDefinition[]>
+{
+    if (!Array.isArray(raw))
+    {
+        return { value: null, errors: ["liste d'items attendue."] };
+    }
+
+    const errors: string[] = [];
+    const items: ItemDefinition[] = [];
+
+    raw.forEach((entry: unknown, position: number) =>
+    {
+        const where = isRecord(entry) && typeof entry.id === "string" ? `item "${entry.id}"` : `item n°${position + 1}`;
+
+        if (!isRecord(entry))
+        {
+            errors.push(`${where} : objet attendu.`);
+            return;
+        }
+
+        const problems: string[] = [];
+
+        const id   = typeof entry.id === "string" && ITEM_PATTERN.test(entry.id) ? entry.id : "";
+        const name = readRequiredText(entry, "name", problems);
+        const tags = readStringList(entry.tags, "tags", problems) ?? [];
+
+        if (id === "")
+        {
+            problems.push(`"id" invalide (minuscules, chiffres et "_", ex. "raw_iron").`);
+        }
+
+        if (id !== "" && items.some((existing: ItemDefinition) => existing.id === id))
+        {
+            problems.push("déjà défini.");
+        }
+
+        if (problems.length > 0)
+        {
+            errors.push(...problems.map((problem: string) => `${where} : ${problem}`));
+            return;
+        }
+
+        items.push({ id, name, tags });
+    });
+
+    if (errors.length > 0)
+    {
+        return { value: null, errors };
+    }
+
+    return { value: items, errors: [] };
 }
 
 

@@ -107,11 +107,21 @@ export type TaskDefinition =
 
 
 
+export type ItemDefinition =
+{
+    id:   string;
+    name: string;
+    tags: string[];
+};
+
+
+
 export type GameDefinition =
 {
     id:           string;
     name:         string;
     capabilities: CapabilityDefinition[];
+    items:        ItemDefinition[];
     tasks:        TaskDefinition[];
 };
 

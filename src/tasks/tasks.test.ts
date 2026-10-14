@@ -5,9 +5,9 @@ import path                    from "node:path";
 import { after, describe, it } from "node:test";
 
 import { loadGames }                          from "./loader";
-import { parseGameManifest, parseTaskDefinition } from "./schema";
+import { parseGameManifest, parseItems, parseTaskDefinition } from "./schema";
 import type { ItemCatalog, TaskDefinition }   from "./types";
-import { resolveParameterValues }             from "./values";
+import { createItemCatalog, resolveParameterValues } from "./values";
 
 
 
@@ -220,6 +220,95 @@ describe("valeurs des paramètres", () =>
         const result   = resolveParameterValues(textTask, { note: "error: ceci est du texte" });
 
         assert.ok(result.ok);
+    });
+});
+
+
+
+// ---------------------------------------------------------------------------
+// Items d'un jeu
+// ---------------------------------------------------------------------------
+
+describe("items d'un jeu", () =>
+{
+    it("accepte une liste d'items valide", () =>
+    {
+        const result = parseItems([{ id: "raw_iron", name: "Fer brut", tags: ["smeltable"] }, { id: "coal", name: "Charbon" }]);
+
+        assert.deepEqual(result.errors, []);
+        assert.deepEqual(result.value?.map((item) => item.tags), [["smeltable"], []]);
+    });
+
+    it("refuse un identifiant invalide, un nom vide et un doublon", () =>
+    {
+        const result = parseItems([
+            { id: "Raw Iron", name: "Fer" },
+            { id: "coal", name: "" },
+            { id: "stick", name: "Bâton" },
+            { id: "stick", name: "Bâton bis" }
+        ]);
+
+        assert.equal(result.value, null);
+        assert.equal(result.errors.length, 3);
+    });
+
+    it("le catalogue filtre par étiquette et refuse un item inconnu", () =>
+    {
+        const catalog = createItemCatalog([
+            { id: "raw_iron", name: "Fer brut", tags: ["smeltable"] },
+            { id: "coal",     name: "Charbon",  tags: ["fuel"] }
+        ]);
+
+        assert.equal(catalog.isAllowed("smeltable", "raw_iron"), true);
+        assert.equal(catalog.isAllowed("smeltable", "coal"), false);
+        assert.equal(catalog.isAllowed(undefined, "coal"), true);
+        assert.equal(catalog.isAllowed("fuel", "dirt"), false);
+    });
+
+    it("le catalogue Minecraft livré sépare items à cuire et carburants", async () =>
+    {
+        const { games } = await loadGames(REAL_GAMES_DIRECTORY);
+        const minecraft = games.find((game) => game.id === "minecraft");
+
+        assert.ok(minecraft && minecraft.items.length > 0);
+
+        const tagsOf = (id: string) => minecraft.items.find((item) => item.id === id)?.tags;
+
+        assert.deepEqual(tagsOf("raw_iron"), ["smeltable"]);
+        assert.deepEqual(tagsOf("coal"), ["fuel"]);
+        assert.deepEqual(tagsOf("oak_log")?.slice().sort(), ["fuel", "smeltable"]);
+    });
+
+    it("le catalogue Minecraft ne contient aucun bloc brut cuisable", async () =>
+    {
+        const { games } = await loadGames(REAL_GAMES_DIRECTORY);
+
+        const rawBlocks = games[0].items.filter((item) => /^raw_.*_block$/.test(item.id));
+
+        assert.deepEqual(rawBlocks, []);
+    });
+
+    it("les noms d'items Minecraft sont en anglais", async () =>
+    {
+        const { games } = await loadGames(REAL_GAMES_DIRECTORY);
+        const names     = new Map(games[0].items.map((item) => [item.id, item.name]));
+
+        assert.equal(names.get("raw_iron"), "Raw Iron");
+        assert.equal(names.get("coal_block"), "Block of Coal");
+        assert.equal(names.get("dark_oak_planks"), "Dark Oak Planks");
+    });
+
+    it("la tâche des fours refuse du charbon à cuire et du fer comme carburant", async () =>
+    {
+        const { games } = await loadGames(REAL_GAMES_DIRECTORY);
+        const minecraft = games[0];
+        const task      = minecraft.tasks[0];
+        const catalog   = createItemCatalog(minecraft.items);
+
+        assert.equal(resolveParameterValues(task, { items: ["raw_iron", "raw_beef"], fuel: ["coal", "oak_planks"] }, catalog).ok, true);
+        assert.equal(resolveParameterValues(task, { items: ["coal"], fuel: ["coal"] }, catalog).ok, false);
+        assert.equal(resolveParameterValues(task, { items: ["raw_iron"], fuel: ["raw_iron"] }, catalog).ok, false);
+        assert.equal(resolveParameterValues(task, { items: ["diamant_inconnu"], fuel: ["coal"] }, catalog).ok, false);
     });
 });
 

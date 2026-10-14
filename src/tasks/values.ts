@@ -3,6 +3,7 @@ import type
 {
     ChoiceOption,
     ItemCatalog,
+    ItemDefinition,
     ParameterError,
     ParameterValue,
     ParameterValues,
@@ -164,6 +165,25 @@ function resolveValue(parameter: TaskParameter, raw: unknown, catalog: ItemCatal
             return accept(items);
         }
     }
+}
+
+
+
+export function createItemCatalog(items: ItemDefinition[]): ItemCatalog
+{
+    return {
+        isAllowed(filter: string | undefined, itemId: string): boolean
+        {
+            const item = items.find((candidate: ItemDefinition) => candidate.id === itemId);
+
+            if (!item)
+            {
+                return false;
+            }
+
+            return filter === undefined || item.tags.includes(filter);
+        }
+    };
 }
 
 

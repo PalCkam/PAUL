@@ -16,6 +16,7 @@ import
 import { linkLegacyProfiles } from "./profiles";
 import { loadGames } from "./tasks/loader";
 import type { LoadResult } from "./tasks/types";
+import { createItemCatalog, resolveParameterValues } from "./tasks/values";
 import type { LaunchEntry, LaunchPayload, Note, NoteChanges, PinnedNoteView, UsageData } from "./types";
 import { isNonEmptyString, isRecord } from "./utils";
 import
@@ -31,6 +32,7 @@ import
     setDockVisible,
     togglePanel
 } from "./windows";
+import type { PanelId } from "./windows";
 
 
 
@@ -40,6 +42,7 @@ const CLOSE_SHORTCUT  = "Escape";
 
 
 let currentProfileName: string | null = null;
+let currentGameId:      string | null = null;
 let pinnedNoteIds:      string[]      = [];
 let hasLaunched                       = false;
 let loadedGames:        LoadResult    = { games: [], errors: [] };
@@ -109,6 +112,14 @@ async function setCurrentProfile(profileName: string | null): Promise<void>
     }
 
     currentProfileName = profileName;
+    currentGameId      = null;
+
+    if (profileName)
+    {
+        const data = await readProfilesFile();
+
+        currentGameId = data.profiles.find((profile) => profile.name === profileName)?.gameId ?? null;
+    }
 
     pinnedNoteIds = [];
 
@@ -432,13 +443,16 @@ ipcMain.handle("dock:getModules", () =>
 
 ipcMain.handle("dock:openModule", (_event, moduleId: unknown) =>
 {
-    if (moduleId === "notes")
+    const known = GAME_MODULES.some((module) => module.id === moduleId);
+
+    if (!known)
     {
-        togglePanel();
-        return { ok: true };
+        return { ok: false };
     }
 
-    return { ok: false };
+    togglePanel(moduleId as PanelId);
+
+    return { ok: true };
 });
 
 
@@ -608,9 +622,38 @@ ipcMain.handle("overlay:getPinnedNotes", () =>
 
 
 
-ipcMain.handle("tasks:list", () =>
+function getCurrentGame()
 {
-    return loadedGames;
+    return loadedGames.games.find((game) => game.id === currentGameId);
+}
+
+
+
+ipcMain.handle("tasks:current", () =>
+{
+    const game = getCurrentGame();
+
+    return {
+        profileName: currentProfileName,
+        game:        game ? { id: game.id, name: game.name } : null,
+        tasks:       game ? game.tasks : [],
+        items:       game ? game.items : []
+    };
+});
+
+
+
+ipcMain.handle("tasks:validate", (_event, taskId: unknown, values: unknown) =>
+{
+    const game = getCurrentGame();
+    const task = game?.tasks.find((candidate) => candidate.id === taskId);
+
+    if (!game || !task)
+    {
+        return { ok: false, errors: [{ parameterId: null, message: "Tâche inconnue pour ce profil." }] };
+    }
+
+    return resolveParameterValues(task, values, createItemCatalog(game.items));
 });
 
 

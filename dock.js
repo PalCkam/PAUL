@@ -10,6 +10,16 @@ const ICONS =
             <path d="M15 3v4h4"></path>
             <path d="M9 12h7M9 16h7"></path>
         </svg>
+    `,
+
+    tasks: `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 7l2 2 3-3"></path>
+            <path d="M12 7h8"></path>
+            <path d="M4 16l2 2 3-3"></path>
+            <path d="M12 16h8"></path>
+        </svg>
     `
 };
 

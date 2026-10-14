@@ -1,8 +1,8 @@
 import fs   from "node:fs/promises";
 import path from "node:path";
 
-import { findMissingCapabilities, parseGameManifest, parseTaskDefinition } from "./schema";
-import type { GameDefinition, GameManifest, LoadResult, TaskDefinition } from "./types";
+import { findMissingCapabilities, parseGameManifest, parseItems, parseTaskDefinition } from "./schema";
+import type { GameDefinition, GameManifest, ItemDefinition, LoadResult, TaskDefinition } from "./types";
 
 
 
@@ -48,6 +48,40 @@ async function listJsonFiles(directory: string): Promise<string[]>
     {
         return [];
     }
+}
+
+
+
+async function loadItems(gamesDirectory: string, folderName: string, errors: string[]): Promise<ItemDefinition[]>
+{
+    const filePath    = path.join(gamesDirectory, folderName, "items.json");
+    const displayPath = `${folderName}/items.json`;
+
+    try
+    {
+        await fs.access(filePath);
+    }
+    catch
+    {
+        return [];
+    }
+
+    const raw = await readJsonFile(filePath, displayPath, errors);
+
+    if (raw === null)
+    {
+        return [];
+    }
+
+    const parsed = parseItems(raw);
+
+    if (!parsed.value)
+    {
+        errors.push(...parsed.errors.map((message: string) => `${displayPath} : ${message}`));
+        return [];
+    }
+
+    return parsed.value;
 }
 
 
@@ -134,7 +168,9 @@ async function loadGame(gamesDirectory: string, folderName: string, errors: stri
         tasks.push(task);
     }
 
-    return { ...parsed.value, tasks };
+    const items = await loadItems(gamesDirectory, folderName, errors);
+
+    return { ...parsed.value, items, tasks };
 }
 
 

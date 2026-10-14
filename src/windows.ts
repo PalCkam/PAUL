@@ -14,10 +14,23 @@ const KEEP_ON_TOP_INTERVAL_MS = 2000;
 
 
 
-let launcherWindow:   BrowserWindow | null = null;
-let overlayWindow:    BrowserWindow | null = null;
-let dockWindow:       BrowserWindow | null = null;
-let notesPanelWindow: BrowserWindow | null = null;
+export type PanelId = "notes" | "tasks";
+
+const PANEL_FILES: Record<PanelId, { html: string; preload: string }> =
+{
+    notes: { html: "notes-panel.html", preload: "notes-panel-preload.js" },
+    tasks: { html: "tasks-panel.html", preload: "tasks-panel-preload.js" }
+};
+
+const PANEL_IDS = Object.keys(PANEL_FILES) as PanelId[];
+
+
+
+let launcherWindow: BrowserWindow | null = null;
+let overlayWindow:  BrowserWindow | null = null;
+let dockWindow:     BrowserWindow | null = null;
+
+const panelWindows: Partial<Record<PanelId, BrowserWindow>> = {};
 
 let keepOnTopTimer: NodeJS.Timeout | null = null;
 
@@ -37,9 +50,9 @@ function getScreenBounds(): Electron.Rectangle
 
 
 
-function isAlive(win: BrowserWindow | null): win is BrowserWindow
+function isAlive(win: BrowserWindow | null | undefined): win is BrowserWindow
 {
-    return win !== null && !win.isDestroyed();
+    return win !== null && win !== undefined && !win.isDestroyed();
 }
 
 
@@ -177,7 +190,7 @@ function createDockWindow(moduleCount: number): BrowserWindow
 
 
 
-function createNotesPanelWindow(): BrowserWindow
+function createPanelWindow(panelId: PanelId): BrowserWindow
 {
     const { x, y, width, height } = getScreenBounds();
 
@@ -199,18 +212,18 @@ function createNotesPanelWindow(): BrowserWindow
         backgroundColor: "#00000000",
         webPreferences:
         {
-            preload:          preloadPath("notes-panel-preload.js"),
+            preload:          preloadPath(PANEL_FILES[panelId].preload),
             contextIsolation: true,
             nodeIntegration:  false
         }
     });
 
     win.setAlwaysOnTop(true, "screen-saver");
-    win.loadFile(path.join(rootDir, "notes-panel.html"));
+    win.loadFile(path.join(rootDir, PANEL_FILES[panelId].html));
 
     win.on("closed", () =>
     {
-        notesPanelWindow = null;
+        delete panelWindows[panelId];
     });
 
     return win;
@@ -227,7 +240,7 @@ function startKeepOnTop(): void
 
     keepOnTopTimer = setInterval(() =>
     {
-        for (const win of [overlayWindow, dockWindow, notesPanelWindow])
+        for (const win of [overlayWindow, dockWindow, ...PANEL_IDS.map((panelId: PanelId) => panelWindows[panelId])])
         {
             if (isAlive(win) && win.isVisible())
             {
@@ -252,9 +265,12 @@ export function ensureOverlayLayer(moduleCount: number): void
         dockWindow = createDockWindow(moduleCount);
     }
 
-    if (!isAlive(notesPanelWindow))
+    for (const panelId of PANEL_IDS)
     {
-        notesPanelWindow = createNotesPanelWindow();
+        if (!isAlive(panelWindows[panelId]))
+        {
+            panelWindows[panelId] = createPanelWindow(panelId);
+        }
     }
 
     overlayWindow.showInactive();
@@ -290,48 +306,62 @@ export function isDockVisible(): boolean
 
 
 
-export function showPanel(): void
+export function showPanel(panelId: PanelId): void
 {
-    if (!isAlive(notesPanelWindow))
+    const panel = panelWindows[panelId] ?? null;
+
+    if (!isAlive(panel))
     {
         return;
     }
 
-    notesPanelWindow.webContents.send("panel:refresh");
-    notesPanelWindow.show();
-    notesPanelWindow.focus();
+    hidePanel();
+
+    panel.webContents.send("panel:refresh");
+    panel.show();
+    panel.focus();
 }
 
 
 
 export function hidePanel(): void
 {
-    if (!isAlive(notesPanelWindow))
+    for (const panelId of PANEL_IDS)
     {
-        return;
+        const panel = panelWindows[panelId] ?? null;
+
+        if (isAlive(panel) && panel.isVisible())
+        {
+            panel.hide();
+        }
     }
-
-    notesPanelWindow.hide();
 }
 
 
 
-export function isPanelVisible(): boolean
+export function isPanelVisible(panelId?: PanelId): boolean
 {
-    return isAlive(notesPanelWindow) && notesPanelWindow.isVisible();
+    const ids = panelId ? [panelId] : PANEL_IDS;
+
+    return ids.some((id: PanelId) =>
+    {
+        const panel = panelWindows[id] ?? null;
+
+        return isAlive(panel) && panel.isVisible();
+    });
 }
 
 
 
-export function togglePanel(): void
+export function togglePanel(panelId: PanelId): void
 {
-    if (isPanelVisible())
+    if (isPanelVisible(panelId))
     {
         hidePanel();
     }
     else
     {
-        showPanel();
+        showPanel(panelId);
     }
 }
 
