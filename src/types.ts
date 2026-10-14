@@ -1,3 +1,7 @@
+import type { ParameterValues, ReportNote } from "./tasks/types";
+
+
+
 export type InputMode = "text" | "voice";
 
 export type Mod = "game" | "dev" | "life";
@@ -61,6 +65,34 @@ export type Note =
 export type NotesFileData =
 {
     notesByProfile: Record<string, Note[]>;
+};
+
+
+
+export type Preset =
+{
+    id:     string;
+    taskId: string;
+    name:   string;
+    values: ParameterValues;
+    key:    number | null;
+};
+
+
+
+export type PresetsFileData =
+{
+    presetsByGame: Record<string, Preset[]>;
+};
+
+
+
+export type OverlayCard =
+{
+    title:    string;
+    headline: string;
+    stats:    { label: string; value: string }[];
+    notes:    ReportNote[];
 };
 
 

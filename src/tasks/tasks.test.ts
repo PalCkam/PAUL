@@ -237,6 +237,7 @@ describe("items d'un jeu", () =>
 
         assert.deepEqual(result.errors, []);
         assert.deepEqual(result.value?.map((item) => item.tags), [["smeltable"], []]);
+        assert.deepEqual(result.value?.map((item) => item.stackSize), [64, 64]);
     });
 
     it("refuse un identifiant invalide, un nom vide et un doublon", () =>
@@ -252,11 +253,25 @@ describe("items d'un jeu", () =>
         assert.equal(result.errors.length, 3);
     });
 
+    it("lit la taille de stack et la durée de combustion, et exige une durée pour un carburant", () =>
+    {
+        const valid = parseItems([{ id: "lava_bucket", name: "Lava Bucket", tags: ["fuel"], stackSize: 1, burnSeconds: 1000 }]);
+
+        assert.deepEqual(valid.errors, []);
+        assert.equal(valid.value?.[0].stackSize, 1);
+        assert.equal(valid.value?.[0].burnSeconds, 1000);
+
+        assert.match(parseItems([{ id: "coal", name: "Coal", tags: ["fuel"] }]).errors[0], /burnSeconds/);
+        assert.equal(parseItems([{ id: "x", name: "X", stackSize: 0 }]).value, null);
+        assert.equal(parseItems([{ id: "x", name: "X", stackSize: 65 }]).value, null);
+        assert.equal(parseItems([{ id: "x", name: "X", burnSeconds: -5 }]).value, null);
+    });
+
     it("le catalogue filtre par étiquette et refuse un item inconnu", () =>
     {
         const catalog = createItemCatalog([
-            { id: "raw_iron", name: "Fer brut", tags: ["smeltable"] },
-            { id: "coal",     name: "Charbon",  tags: ["fuel"] }
+            { id: "raw_iron", name: "Fer brut", tags: ["smeltable"], stackSize: 64, burnSeconds: undefined },
+            { id: "coal",     name: "Charbon",  tags: ["fuel"],      stackSize: 64, burnSeconds: 80 }
         ]);
 
         assert.equal(catalog.isAllowed("smeltable", "raw_iron"), true);
@@ -274,7 +289,8 @@ describe("items d'un jeu", () =>
 
         const tagsOf = (id: string) => minecraft.items.find((item) => item.id === id)?.tags;
 
-        assert.deepEqual(tagsOf("raw_iron"), ["smeltable"]);
+        assert.deepEqual(tagsOf("raw_iron")?.slice().sort(), ["blastable", "smeltable"]);
+        assert.deepEqual(tagsOf("raw_beef")?.slice().sort(), ["smeltable", "smokable"]);
         assert.deepEqual(tagsOf("coal"), ["fuel"]);
         assert.deepEqual(tagsOf("oak_log")?.slice().sort(), ["fuel", "smeltable"]);
     });

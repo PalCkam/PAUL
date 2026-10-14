@@ -5,15 +5,21 @@ const taskListEl     = document.getElementById("taskList");
 const taskDetailsEl  = document.getElementById("taskDetails");
 const closeButton    = document.getElementById("closeButton");
 
+const PRESET_KEYS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+
 const state =
 {
     context:        null,
     selectedTaskId: null,
-    valuesByTask:   {}
+    valuesByTask:   {},
+    scenarioByTask: {},
+    draftByTask:    {},
+    presets:        []
 };
 
-let fieldErrorEls = {};
-let resultEl      = null;
+let fieldErrorEls    = {};
+let resultEl         = null;
+let presetMessageEl  = null;
 
 
 function createElement(tag, className, text)
@@ -192,29 +198,79 @@ function createItemsControl(parameter, values)
 }
 
 
+document.addEventListener("click", (event) =>
+{
+    for (const list of document.querySelectorAll(".dropdown-list"))
+    {
+        if (!list.parentElement.contains(event.target))
+        {
+            list.classList.add("is-hidden");
+        }
+    }
+});
+
+
+function createDropdown(options, initialValue, onChange)
+{
+    const container = createElement("div", "dropdown");
+    const toggle    = createElement("button", "dropdown-toggle");
+    const list      = createElement("div", "dropdown-list is-hidden");
+
+    let value = initialValue;
+
+    toggle.type = "button";
+
+    function render()
+    {
+        const selected = options.find((option) => option.value === value);
+
+        toggle.textContent = `${selected ? selected.label : "—"} ▾`;
+
+        list.replaceChildren(...options.map((option) =>
+        {
+            const isSelected = option.value === value;
+            const button     = createElement("button", isSelected ? "dropdown-option is-selected" : "dropdown-option", option.label);
+
+            button.type = "button";
+
+            button.addEventListener("click", () =>
+            {
+                value = option.value;
+                list.classList.add("is-hidden");
+                render();
+                onChange(value);
+            });
+
+            return button;
+        }));
+    }
+
+    toggle.addEventListener("click", () =>
+    {
+        list.classList.toggle("is-hidden");
+    });
+
+    container.append(toggle, list);
+    render();
+
+    return container;
+}
+
+
 function createSelectControl(parameter, values, options)
 {
-    const select = createElement("select");
+    const choices = [...options];
 
     if (!parameter.required && parameter.default === undefined)
     {
-        select.append(new Option("—", ""));
+        choices.unshift({ value: "", label: "—" });
     }
 
-    for (const option of options)
+    return createDropdown(choices, values[parameter.id], (value) =>
     {
-        select.append(new Option(option.label, option.value));
-    }
-
-    select.value = values[parameter.id];
-
-    select.addEventListener("change", () =>
-    {
-        values[parameter.id] = select.value;
+        values[parameter.id] = value;
         clearResult();
     });
-
-    return select;
 }
 
 
@@ -379,14 +435,54 @@ function buildPayload(task)
 }
 
 
+function createReportElement(report)
+{
+    const reportEl = createElement("div", "report");
+
+    reportEl.append(createElement("div", "report-headline", report.headline));
+
+    for (const stat of report.stats)
+    {
+        reportEl.append(createElement("div", "report-line", `${stat.label} : ${stat.value}`));
+    }
+
+    for (const step of report.steps)
+    {
+        const stepEl = createElement("div", "report-step");
+
+        stepEl.append(createElement("div", "report-step-title", step.title));
+
+        for (const line of step.lines)
+        {
+            stepEl.append(createElement("div", "report-line", line));
+        }
+
+        reportEl.append(stepEl);
+    }
+
+    for (const note of report.notes)
+    {
+        const className = note.level === "warning" ? "report-note is-warning" : "report-note is-info";
+
+        reportEl.append(createElement("div", className, note.message));
+    }
+
+    return reportEl;
+}
+
+
 function showResult(task, result)
 {
     clearResult();
 
+    resultEl = createElement("div", "result-group");
+
+    let block;
+
     if (result.ok)
     {
-        resultEl = createElement("div", "result is-valid");
-        resultEl.append(createElement("div", "result-title", "Réglages valides"));
+        block = createElement("div", "result is-valid");
+        block.append(createElement("div", "result-title", "Réglages valides"));
 
         for (const parameter of task.parameters)
         {
@@ -399,13 +495,13 @@ function showResult(task, result)
 
             const text = value === undefined ? parameter.emptyMeans : formatValue(parameter, value);
 
-            resultEl.append(createElement("div", "", `${parameter.label} : ${text}`));
+            block.append(createElement("div", "", `${parameter.label} : ${text}`));
         }
     }
     else
     {
-        resultEl = createElement("div", "result is-invalid");
-        resultEl.append(createElement("div", "result-title", "Réglages à corriger"));
+        block = createElement("div", "result is-invalid");
+        block.append(createElement("div", "result-title", "Réglages à corriger"));
 
         for (const error of result.errors)
         {
@@ -417,21 +513,28 @@ function showResult(task, result)
             }
             else
             {
-                resultEl.append(createElement("div", "", error.message));
+                block.append(createElement("div", "", error.message));
             }
         }
 
-        if (resultEl.children.length === 1)
+        if (block.children.length === 1)
         {
-            resultEl.append(createElement("div", "", "Vérifie les champs en rouge."));
+            block.append(createElement("div", "", "Vérifie les champs en rouge."));
         }
+    }
+
+    resultEl.append(block);
+
+    if (result.ok && result.report)
+    {
+        resultEl.append(createReportElement(result.report));
     }
 
     taskDetailsEl.append(resultEl);
 }
 
 
-async function validateCurrentTask()
+async function simulateCurrentTask()
 {
     const task = getSelectedTask();
 
@@ -440,9 +543,263 @@ async function validateCurrentTask()
         return;
     }
 
-    const result = await api.validate(task.id, buildPayload(task));
+    const scenarioId = state.scenarioByTask[task.id] || "";
+    const result     = await api.simulate(task.id, buildPayload(task), scenarioId);
 
     showResult(task, result);
+}
+
+
+function createScenarioField(task, scenarios)
+{
+    const field   = createElement("div", "field");
+    const options = scenarios.map((scenario) => ({ value: scenario.id, label: scenario.label }));
+    const current = state.scenarioByTask[task.id] || scenarios[0].id;
+
+    state.scenarioByTask[task.id] = current;
+
+    const dropdown = createDropdown(options, current, (value) =>
+    {
+        state.scenarioByTask[task.id] = value;
+        clearResult();
+    });
+
+    field.append(
+        createElement("div", "field-label", "Données de test"),
+        createElement("div", "field-hint", "Fausses données, en attendant la lecture réelle du jeu."),
+        dropdown
+    );
+
+    return field;
+}
+
+
+function getDraft(task)
+{
+    if (!state.draftByTask[task.id])
+    {
+        state.draftByTask[task.id] = { name: "", key: null };
+    }
+
+    return state.draftByTask[task.id];
+}
+
+
+function getTaskPresets(task)
+{
+    return state.presets.filter((preset) => preset.taskId === task.id);
+}
+
+
+function createValuesFromPreset(task, saved)
+{
+    const values = createInitialValues(task);
+
+    for (const parameter of task.parameters)
+    {
+        const value = saved[parameter.id];
+
+        if (value !== undefined)
+        {
+            values[parameter.id] = Array.isArray(value) ? [...value] : value;
+        }
+    }
+
+    return values;
+}
+
+
+function setPresetMessage(text, isError)
+{
+    if (!presetMessageEl)
+    {
+        return;
+    }
+
+    presetMessageEl.textContent = text;
+    presetMessageEl.className   = isError ? "preset-message is-error" : "preset-message";
+}
+
+
+function createPresetRow(task, preset)
+{
+    const row     = createElement("div", "preset-row");
+    const label   = createElement("div", "preset-label");
+    const actions = createElement("div", "preset-actions");
+    const load    = createElement("button", "secondary", "Charger");
+    const remove  = createElement("button", "secondary", "Supprimer");
+
+    let confirmTimer = null;
+
+    label.append(createElement("span", "preset-name", preset.name));
+
+    if (preset.key !== null)
+    {
+        label.append(createElement("span", "preset-badge", `Pavé ${preset.key}`));
+    }
+
+    load.type   = "button";
+    remove.type = "button";
+
+    load.addEventListener("click", () =>
+    {
+        state.valuesByTask[task.id] = createValuesFromPreset(task, preset.values);
+        state.draftByTask[task.id]  = { name: preset.name, key: preset.key };
+
+        renderTaskDetails();
+        setPresetMessage(`Préréglage « ${preset.name} » chargé.`, false);
+    });
+
+    remove.addEventListener("click", async () =>
+    {
+        if (confirmTimer === null)
+        {
+            remove.textContent = "Confirmer ?";
+            remove.className   = "danger";
+
+            confirmTimer = setTimeout(() =>
+            {
+                confirmTimer       = null;
+                remove.textContent = "Supprimer";
+                remove.className   = "secondary";
+            }, 3000);
+
+            return;
+        }
+
+        clearTimeout(confirmTimer);
+
+        const result = await api.deletePreset(preset.id);
+
+        if (result.ok)
+        {
+            state.presets = result.presets;
+            renderTaskDetails();
+            setPresetMessage(`Préréglage « ${preset.name} » supprimé.`, false);
+        }
+    });
+
+    actions.append(load, remove);
+    row.append(label, actions);
+
+    return row;
+}
+
+
+function createPresetList(task)
+{
+    const section = createElement("div", "preset-section");
+    const presets = getTaskPresets(task);
+
+    section.append(createElement("div", "field-label", "Préréglages"));
+
+    if (presets.length === 0)
+    {
+        section.append(createElement("div", "panel-empty", "Aucun préréglage pour cette tâche."));
+        return section;
+    }
+
+    for (const preset of presets)
+    {
+        section.append(createPresetRow(task, preset));
+    }
+
+    return section;
+}
+
+
+async function saveCurrentPreset(task)
+{
+    const draft  = getDraft(task);
+    const result = await api.savePreset(task.id, draft.name, buildPayload(task), draft.key);
+
+    if (!result.ok)
+    {
+        const metaErrors = result.errors.filter((error) => error.parameterId === "name" || error.parameterId === "key");
+
+        if (metaErrors.length > 0)
+        {
+            setPresetMessage(metaErrors.map((error) => error.message).join(" "), true);
+        }
+
+        if (metaErrors.length < result.errors.length)
+        {
+            showResult(task, { ok: false, errors: result.errors.filter((error) => !metaErrors.includes(error)) });
+            setPresetMessage("Corrige les réglages avant d'enregistrer.", true);
+        }
+
+        return;
+    }
+
+    state.presets = result.presets;
+
+    renderTaskDetails();
+    setPresetMessage(result.notice || (result.created ? "Préréglage enregistré." : "Préréglage mis à jour."), false);
+}
+
+
+function createSaveSection(task)
+{
+    const section   = createElement("div", "preset-section");
+    const draft     = getDraft(task);
+    const nameEl    = createElement("input");
+    const keyHolder = createElement("div");
+    const button    = createElement("button", "", "Enregistrer le préréglage");
+
+    function createKeyOptions()
+    {
+        const draftName = draft.name.trim().toLowerCase();
+        const options   = [{ value: "", label: "Aucune touche" }];
+
+        for (const key of PRESET_KEYS)
+        {
+            const owner = state.presets.find((preset) =>
+            {
+                return preset.key === key && !(preset.taskId === task.id && preset.name.toLowerCase() === draftName);
+            });
+
+            options.push({ value: String(key), label: owner ? `Pavé ${key} (utilisé par « ${owner.name} »)` : `Pavé ${key}` });
+        }
+
+        return options;
+    }
+
+    function renderKeyDropdown()
+    {
+        keyHolder.replaceChildren(createDropdown(createKeyOptions(), draft.key === null ? "" : String(draft.key), (value) =>
+        {
+            draft.key = value === "" ? null : Number(value);
+        }));
+    }
+
+    nameEl.type        = "text";
+    nameEl.placeholder = "Nom du préréglage";
+    nameEl.maxLength   = 40;
+    nameEl.value       = draft.name;
+
+    nameEl.addEventListener("input", () =>
+    {
+        draft.name = nameEl.value;
+        renderKeyDropdown();
+    });
+
+    button.type = "button";
+    button.addEventListener("click", () => saveCurrentPreset(task));
+
+    presetMessageEl = createElement("div", "preset-message");
+
+    renderKeyDropdown();
+
+    section.append(
+        createElement("div", "field-label", "Enregistrer ces réglages"),
+        createElement("div", "field-hint", "Partagé par tous les profils de ce jeu. Une touche du pavé numérique lance la simulation quand la barre F4 est ouverte."),
+        nameEl,
+        keyHolder,
+        button,
+        presetMessageEl
+    );
+
+    return section;
 }
 
 
@@ -450,8 +807,9 @@ function renderTaskDetails()
 {
     const task = getSelectedTask();
 
-    fieldErrorEls = {};
-    resultEl      = null;
+    fieldErrorEls   = {};
+    resultEl        = null;
+    presetMessageEl = null;
 
     if (!task)
     {
@@ -463,18 +821,27 @@ function renderTaskDetails()
     const values = getValues(task);
 
     form.append(createElement("div", "task-description", task.description));
+    form.append(createPresetList(task));
 
     for (const parameter of task.parameters)
     {
         form.append(createField(parameter, values));
     }
 
-    const validateButton = createElement("button", "", "Vérifier les réglages");
+    const scenarios = (state.context.simulations && state.context.simulations[task.id]) || [];
 
-    validateButton.type = "button";
-    validateButton.addEventListener("click", validateCurrentTask);
+    if (scenarios.length > 0)
+    {
+        form.append(createScenarioField(task, scenarios));
+    }
 
-    form.append(validateButton);
+    const simulateButton = createElement("button", "", scenarios.length > 0 ? "Simuler" : "Vérifier les réglages");
+
+    simulateButton.type = "button";
+    simulateButton.addEventListener("click", simulateCurrentTask);
+
+    form.append(simulateButton);
+    form.append(createSaveSection(task));
 
     taskDetailsEl.replaceChildren(form);
 }
@@ -513,6 +880,10 @@ function renderEmptyState(message)
 async function loadContext()
 {
     state.context = await api.getContext();
+
+    const presetsResult = await api.listPresets();
+
+    state.presets = presetsResult.presets;
 
     const { profileName, game, tasks } = state.context;
 

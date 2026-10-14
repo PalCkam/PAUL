@@ -467,6 +467,24 @@ export function parseItems(raw: unknown): ParseResult<ItemDefinition[]>
         const name = readRequiredText(entry, "name", problems);
         const tags = readStringList(entry.tags, "tags", problems) ?? [];
 
+        const stackSize   = entry.stackSize === undefined ? 64 : entry.stackSize;
+        const burnSeconds = entry.burnSeconds;
+
+        if (typeof stackSize !== "number" || !Number.isInteger(stackSize) || stackSize < 1 || stackSize > 64)
+        {
+            problems.push(`"stackSize" doit être un entier entre 1 et 64.`);
+        }
+
+        if (burnSeconds !== undefined && !(isFiniteNumber(burnSeconds) && burnSeconds > 0))
+        {
+            problems.push(`"burnSeconds" doit être un nombre positif.`);
+        }
+
+        if (tags.includes("fuel") && burnSeconds === undefined)
+        {
+            problems.push(`un carburant ("fuel") doit avoir un "burnSeconds".`);
+        }
+
         if (id === "")
         {
             problems.push(`"id" invalide (minuscules, chiffres et "_", ex. "raw_iron").`);
@@ -483,7 +501,13 @@ export function parseItems(raw: unknown): ParseResult<ItemDefinition[]>
             return;
         }
 
-        items.push({ id, name, tags });
+        items.push({
+            id,
+            name,
+            tags,
+            stackSize:   stackSize as number,
+            burnSeconds: burnSeconds as number | undefined
+        });
     });
 
     if (errors.length > 0)

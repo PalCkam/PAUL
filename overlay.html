@@ -35,6 +35,68 @@
         }
 
 
+        .task-card
+        {
+            position:       fixed;
+            top:            16px;
+            left:           16px;
+            width:          320px;
+            border-radius:  8px;
+            border:         1px solid rgba(52, 152, 219, 0.6);
+            background:     rgba(12, 12, 12, 0.92);
+            padding:        12px;
+            pointer-events: none;
+        }
+
+
+        .task-card.is-hidden
+        {
+            display: none;
+        }
+
+
+        .task-card-title
+        {
+            font-size:      0.75rem;
+            font-weight:    600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color:          #8d887e;
+            margin-bottom:  4px;
+        }
+
+
+        .task-card-headline
+        {
+            font-size:     0.95rem;
+            font-weight:   600;
+            margin-bottom: 6px;
+        }
+
+
+        .task-card-line
+        {
+            font-size: 0.82rem;
+            color:     #d1ccc2;
+        }
+
+
+        .task-card-warning
+        {
+            margin-top: 6px;
+            font-size:  0.8rem;
+            color:      #f39c12;
+        }
+
+
+        .task-card-hint
+        {
+            margin-top: 8px;
+            font-size:  0.72rem;
+            color:      #8d887e;
+        }
+
+
         .pinned-note
         {
             border-radius: 8px;
@@ -65,6 +127,7 @@
 
 
 <body>
+    <div id="taskCard" class="task-card is-hidden"></div>
     <div id="pinnedNotes" class="pinned-notes"></div>
 
     <script src="./overlay.js"></script>

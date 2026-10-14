@@ -9,9 +9,24 @@ contextBridge.exposeInMainWorld("tasksPanelApi",
         return ipcRenderer.invoke("tasks:current");
     },
 
-    validate(taskId: string, values: Record<string, unknown>)
+    simulate(taskId: string, values: Record<string, unknown>, scenarioId: string)
     {
-        return ipcRenderer.invoke("tasks:validate", taskId, values);
+        return ipcRenderer.invoke("tasks:simulate", taskId, values, scenarioId);
+    },
+
+    listPresets()
+    {
+        return ipcRenderer.invoke("presets:list");
+    },
+
+    savePreset(taskId: string, name: string, values: Record<string, unknown>, key: number | null)
+    {
+        return ipcRenderer.invoke("presets:save", taskId, name, values, key);
+    },
+
+    deletePreset(presetId: string)
+    {
+        return ipcRenderer.invoke("presets:delete", presetId);
     },
 
     close()

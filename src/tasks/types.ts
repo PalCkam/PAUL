@@ -109,9 +109,11 @@ export type TaskDefinition =
 
 export type ItemDefinition =
 {
-    id:   string;
-    name: string;
-    tags: string[];
+    id:          string;
+    name:        string;
+    tags:        string[];
+    stackSize:   number;
+    burnSeconds: number | undefined;
 };
 
 
@@ -132,6 +134,40 @@ export type GameManifest =
     id:           string;
     name:         string;
     capabilities: CapabilityDefinition[];
+};
+
+
+
+export type SimulationScenario =
+{
+    id:    string;
+    label: string;
+};
+
+
+
+export type ReportNote =
+{
+    level:   "info" | "warning";
+    message: string;
+};
+
+
+
+export type SimulationStep =
+{
+    title: string;
+    lines: string[];
+};
+
+
+
+export type SimulationReport =
+{
+    headline: string;
+    stats:    { label: string; value: string }[];
+    steps:    SimulationStep[];
+    notes:    ReportNote[];
 };
 
 

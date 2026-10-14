@@ -2,7 +2,8 @@ import { app } from "electron";
 import fs        from "node:fs/promises";
 import path      from "node:path";
 
-import type { GameProfile, LaunchEntry, Note, NotesFileData, ProfilesFileData, UsageData } from "./types";
+import type { ParameterValues } from "./tasks/types";
+import type { GameProfile, LaunchEntry, Note, NotesFileData, Preset, PresetsFileData, ProfilesFileData, UsageData } from "./types";
 import { isNonEmptyString, isRecord } from "./utils";
 
 
@@ -24,6 +25,13 @@ function getProfilesFilePath(): string
 function getNotesFilePath(): string
 {
     return path.join(getDataDirectoryPath(), "notes.json");
+}
+
+
+
+function getPresetsFilePath(): string
+{
+    return path.join(getDataDirectoryPath(), "presets.json");
 }
 
 
@@ -132,6 +140,31 @@ function toNote(value: unknown): Note | null
 
 
 
+function toPreset(value: unknown): Preset | null
+{
+    if (!isRecord(value) || !isNonEmptyString(value.id) || !isNonEmptyString(value.taskId))
+    {
+        return null;
+    }
+
+    if (!isNonEmptyString(value.name) || !isRecord(value.values))
+    {
+        return null;
+    }
+
+    const validKey = typeof value.key === "number" && Number.isInteger(value.key) && value.key >= 1 && value.key <= 9;
+
+    return {
+        id:     value.id,
+        taskId: value.taskId,
+        name:   value.name.trim(),
+        values: value.values as ParameterValues,
+        key:    validKey ? (value.key as number) : null
+    };
+}
+
+
+
 function compact<T>(items: (T | null)[]): T[]
 {
     return items.filter((item): item is T => item !== null);
@@ -209,6 +242,34 @@ export async function readNotesFile(): Promise<NotesFileData>
     }
 
     return { notesByProfile };
+}
+
+
+
+export async function readPresetsFile(): Promise<PresetsFileData>
+{
+    const parsed = await readJson(getPresetsFilePath());
+
+    if (!isRecord(parsed) || !isRecord(parsed.presetsByGame))
+    {
+        return { presetsByGame: {} };
+    }
+
+    const presetsByGame: Record<string, Preset[]> = {};
+
+    for (const [gameId, presets] of Object.entries(parsed.presetsByGame))
+    {
+        presetsByGame[gameId] = Array.isArray(presets) ? compact(presets.map(toPreset)) : [];
+    }
+
+    return { presetsByGame };
+}
+
+
+
+export function writePresetsFile(data: PresetsFileData): Promise<void>
+{
+    return writeJsonAtomic(getPresetsFilePath(), data);
 }
 
 

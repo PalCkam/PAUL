@@ -7,18 +7,22 @@ import
 {
     migrateLegacyProfiles,
     readNotesFile,
+    readPresetsFile,
     readProfilesFile,
     readUsageFile,
     writeNotesFile,
+    writePresetsFile,
     writeProfilesFile,
     writeUsageFile
 } from "./store";
 import { linkLegacyProfiles } from "./profiles";
+import { parsePresetMeta, toOverlayCard, upsertPreset } from "./presets";
 import { loadGames } from "./tasks/loader";
 import type { LoadResult } from "./tasks/types";
 import { createItemCatalog, resolveParameterValues } from "./tasks/values";
-import type { LaunchEntry, LaunchPayload, Note, NoteChanges, PinnedNoteView, UsageData } from "./types";
-import { isNonEmptyString, isRecord } from "./utils";
+import { getTaskImplementation } from "./games/registry";
+import type { LaunchEntry, LaunchPayload, Note, NoteChanges, OverlayCard, PinnedNoteView, Preset, UsageData } from "./types";
+import { createLock, isNonEmptyString, isRecord } from "./utils";
 import
 {
     createLauncherWindow,
@@ -47,24 +51,19 @@ let pinnedNoteIds:      string[]      = [];
 let hasLaunched                       = false;
 let loadedGames:        LoadResult    = { games: [], errors: [] };
 
+let lastOverlayCard:      OverlayCard | null = null;
+let registeredPresetKeys: number[]           = [];
+
+const lastScenarioByTask = new Map<string, string>();
+
 
 
 // ---------------------------------------------------------------------------
 // Notes : accès et verrou
 // ---------------------------------------------------------------------------
 
-let notesLock: Promise<unknown> = Promise.resolve();
-
-
-
-function withNotesLock<T>(task: () => Promise<T>): Promise<T>
-{
-    const run = notesLock.then(task);
-
-    notesLock = run.catch(() => undefined);
-
-    return run;
-}
+const withNotesLock   = createLock();
+const withPresetsLock = createLock();
 
 
 
@@ -124,6 +123,10 @@ async function setCurrentProfile(profileName: string | null): Promise<void>
     pinnedNoteIds = [];
 
     await pushPinnedNotes();
+
+    showOverlayCard(null);
+
+    await refreshPresetShortcuts();
 }
 
 
@@ -182,6 +185,8 @@ function openInterface(): void
     setDockVisible(true);
 
     globalShortcut.register(CLOSE_SHORTCUT, handleEscape);
+
+    void refreshPresetShortcuts();
 }
 
 
@@ -192,6 +197,8 @@ function closeInterface(): void
     setDockVisible(false);
 
     globalShortcut.unregister(CLOSE_SHORTCUT);
+
+    unregisterPresetShortcuts();
 }
 
 
@@ -223,6 +230,134 @@ function toggleInterface(): void
     else
     {
         openInterface();
+    }
+}
+
+
+
+// ---------------------------------------------------------------------------
+// Préréglages et pavé numérique
+// ---------------------------------------------------------------------------
+
+async function getCurrentPresets(): Promise<Preset[]>
+{
+    if (!currentGameId)
+    {
+        return [];
+    }
+
+    const data = await readPresetsFile();
+
+    return data.presetsByGame[currentGameId] ?? [];
+}
+
+
+
+function showOverlayCard(card: OverlayCard | null): void
+{
+    lastOverlayCard = card;
+
+    sendToOverlay("overlay:taskReport", card);
+}
+
+
+
+async function runPreset(preset: Preset): Promise<void>
+{
+    const game = getCurrentGame();
+    const task = game?.tasks.find((candidate) => candidate.id === preset.taskId);
+
+    if (!game || !task)
+    {
+        showOverlayCard({ title: preset.name, headline: "Tâche introuvable pour ce jeu.", stats: [], notes: [] });
+        return;
+    }
+
+    const resolved = resolveParameterValues(task, preset.values, createItemCatalog(game.items));
+
+    if (!resolved.ok)
+    {
+        showOverlayCard({
+            title:    preset.name,
+            headline: "Préréglage invalide",
+            stats:    [],
+            notes:    resolved.errors.map((error) => ({ level: "warning" as const, message: error.message }))
+        });
+        return;
+    }
+
+    const implementation = getTaskImplementation(game.id, task.id);
+
+    if (!implementation)
+    {
+        showOverlayCard({ title: preset.name, headline: "Aucune simulation disponible pour cette tâche.", stats: [], notes: [] });
+        return;
+    }
+
+    const scenarioId = lastScenarioByTask.get(`${game.id}/${task.id}`) ?? "";
+    const report     = implementation.simulate(resolved.values, scenarioId, game.items);
+
+    showOverlayCard(toOverlayCard(`${preset.name} · simulation`, report));
+}
+
+
+
+async function runPresetOnKey(key: number): Promise<void>
+{
+    const presets = await getCurrentPresets();
+    const preset  = presets.find((candidate) => candidate.key === key);
+
+    if (preset)
+    {
+        await runPreset(preset);
+    }
+}
+
+
+
+function unregisterPresetShortcuts(): void
+{
+    for (const key of registeredPresetKeys)
+    {
+        globalShortcut.unregister(`num${key}`);
+    }
+
+    registeredPresetKeys = [];
+}
+
+
+
+async function refreshPresetShortcuts(): Promise<void>
+{
+    unregisterPresetShortcuts();
+
+    if (!isDockVisible())
+    {
+        return;
+    }
+
+    const presets = await getCurrentPresets();
+
+    if (!isDockVisible())
+    {
+        return;
+    }
+
+    unregisterPresetShortcuts();
+
+    const keys = [...new Set(presets.map((preset) => preset.key).filter((key): key is number => key !== null))];
+
+    for (const key of keys)
+    {
+        if (globalShortcut.register(`num${key}`, () => void runPresetOnKey(key)))
+        {
+            registeredPresetKeys.push(key);
+        }
+    }
+
+    if (globalShortcut.register("num0", () => showOverlayCard(null)))
+    {
+        registeredPresetKeys.push(0);
     }
 }
 
@@ -622,6 +757,89 @@ ipcMain.handle("overlay:getPinnedNotes", () =>
 
 
 
+ipcMain.handle("overlay:getTaskReport", () =>
+{
+    return lastOverlayCard;
+});
+
+
+
+ipcMain.handle("presets:list", async () =>
+{
+    return { presets: await getCurrentPresets() };
+});
+
+
+
+ipcMain.handle("presets:save", async (_event, taskId: unknown, name: unknown, values: unknown, key: unknown) =>
+{
+    const game = getCurrentGame();
+    const task = game?.tasks.find((candidate) => candidate.id === taskId);
+
+    if (!game || !task)
+    {
+        return { ok: false, errors: [{ parameterId: null, message: "Tâche inconnue pour ce profil." }] };
+    }
+
+    const meta     = parsePresetMeta(name, key);
+    const resolved = resolveParameterValues(task, values, createItemCatalog(game.items));
+
+    if (!meta.ok || !resolved.ok)
+    {
+        return { ok: false, errors: [...(meta.ok ? [] : meta.errors), ...(resolved.ok ? [] : resolved.errors)] };
+    }
+
+    const result = await withPresetsLock(async () =>
+    {
+        const data    = await readPresetsFile();
+        const updated = upsertPreset(
+            data.presetsByGame[game.id] ?? [],
+            { taskId: task.id, name: meta.meta.name, values: resolved.values, key: meta.meta.key },
+            () => `preset_${randomUUID()}`
+        );
+
+        data.presetsByGame[game.id] = updated.presets;
+
+        await writePresetsFile(data);
+
+        return updated;
+    });
+
+    await refreshPresetShortcuts();
+
+    return { ok: true, presets: result.presets, created: result.created, notice: result.notice };
+});
+
+
+
+ipcMain.handle("presets:delete", async (_event, presetId: unknown) =>
+{
+    if (!isNonEmptyString(presetId) || !currentGameId)
+    {
+        return { ok: false };
+    }
+
+    const gameId = currentGameId;
+
+    const presets = await withPresetsLock(async () =>
+    {
+        const data = await readPresetsFile();
+        const next = (data.presetsByGame[gameId] ?? []).filter((preset) => preset.id !== presetId);
+
+        data.presetsByGame[gameId] = next;
+
+        await writePresetsFile(data);
+
+        return next;
+    });
+
+    await refreshPresetShortcuts();
+
+    return { ok: true, presets };
+});
+
+
+
 function getCurrentGame()
 {
     return loadedGames.games.find((game) => game.id === currentGameId);
@@ -637,13 +855,17 @@ ipcMain.handle("tasks:current", () =>
         profileName: currentProfileName,
         game:        game ? { id: game.id, name: game.name } : null,
         tasks:       game ? game.tasks : [],
-        items:       game ? game.items : []
+        items:       game ? game.items : [],
+        simulations: Object.fromEntries((game ? game.tasks : []).map((task) =>
+        {
+            return [task.id, getTaskImplementation(game!.id, task.id)?.scenarios ?? []];
+        }))
     };
 });
 
 
 
-ipcMain.handle("tasks:validate", (_event, taskId: unknown, values: unknown) =>
+ipcMain.handle("tasks:simulate", (_event, taskId: unknown, values: unknown, scenarioId: unknown) =>
 {
     const game = getCurrentGame();
     const task = game?.tasks.find((candidate) => candidate.id === taskId);
@@ -653,7 +875,25 @@ ipcMain.handle("tasks:validate", (_event, taskId: unknown, values: unknown) =>
         return { ok: false, errors: [{ parameterId: null, message: "Tâche inconnue pour ce profil." }] };
     }
 
-    return resolveParameterValues(task, values, createItemCatalog(game.items));
+    const resolved = resolveParameterValues(task, values, createItemCatalog(game.items));
+
+    if (!resolved.ok)
+    {
+        return resolved;
+    }
+
+    if (typeof scenarioId === "string" && scenarioId !== "")
+    {
+        lastScenarioByTask.set(`${game.id}/${task.id}`, scenarioId);
+    }
+
+    const implementation = getTaskImplementation(game.id, task.id);
+
+    const report = implementation
+        ? implementation.simulate(resolved.values, typeof scenarioId === "string" ? scenarioId : "", game.items)
+        : null;
+
+    return { ok: true, values: resolved.values, report };
 });
 
 

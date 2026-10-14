@@ -144,8 +144,7 @@
 
 
         input[type="text"],
-        input[type="number"],
-        select
+        input[type="number"]
         {
             width:         100%;
             box-sizing:    border-box;
@@ -159,11 +158,148 @@
         }
 
 
-        input:focus,
-        select:focus
+        input:focus
         {
             outline:      none;
             border-color: rgba(52, 152, 219, 0.7);
+        }
+
+
+        .is-hidden
+        {
+            display: none;
+        }
+
+
+        .dropdown
+        {
+            display:        flex;
+            flex-direction: column;
+            gap:            4px;
+        }
+
+
+        .dropdown-toggle
+        {
+            width:         100%;
+            box-sizing:    border-box;
+            text-align:    left;
+            border:        1px solid rgba(127, 127, 127, 0.35);
+            background:    rgba(24, 24, 24, 1);
+            padding:       6px 8px;
+            font-size:     0.85rem;
+        }
+
+
+        .dropdown-list
+        {
+            display:        flex;
+            flex-direction: column;
+            gap:            2px;
+            max-height:     200px;
+            overflow-y:     auto;
+            border-radius:  4px;
+            border:         1px solid rgba(127, 127, 127, 0.25);
+            padding:        4px;
+        }
+
+
+        .dropdown-option
+        {
+            text-align:  left;
+            background:  transparent;
+            padding:     5px 6px;
+            font-size:   0.8rem;
+            color:       #d1ccc2;
+        }
+
+
+        .dropdown-option.is-selected
+        {
+            background: rgba(52, 152, 219, 0.25);
+            color:      #f1efe9;
+        }
+
+
+        .dropdown-toggle:hover:not(:disabled),
+        .dropdown-option:hover:not(:disabled)
+        {
+            background: rgba(52, 152, 219, 0.2);
+        }
+
+
+        .preset-section
+        {
+            display:        flex;
+            flex-direction: column;
+            gap:            6px;
+        }
+
+
+        .preset-row
+        {
+            display:         flex;
+            justify-content: space-between;
+            align-items:     center;
+            gap:             6px;
+            border-radius:   6px;
+            border:          1px solid rgba(127, 127, 127, 0.25);
+            background:      rgba(24, 24, 24, 1);
+            padding:         6px 8px;
+        }
+
+
+        .preset-label
+        {
+            display:     flex;
+            flex-wrap:   wrap;
+            align-items: center;
+            gap:         6px;
+            min-width:   0;
+            font-size:   0.85rem;
+        }
+
+
+        .preset-name
+        {
+            font-weight:   600;
+            overflow-wrap: anywhere;
+        }
+
+
+        .preset-badge
+        {
+            border-radius: 10px;
+            background:    rgba(52, 152, 219, 0.35);
+            padding:       1px 7px;
+            font-size:     0.72rem;
+        }
+
+
+        .preset-actions
+        {
+            display:     flex;
+            gap:         4px;
+            flex-shrink: 0;
+        }
+
+
+        .preset-message
+        {
+            font-size: 0.8rem;
+            color:     #2ecc71;
+        }
+
+
+        .preset-message.is-error
+        {
+            color: #e74c3c;
+        }
+
+
+        button.danger
+        {
+            background: #e74c3c;
         }
 
 
@@ -251,6 +387,67 @@
         {
             font-weight: 600;
             margin-bottom: 4px;
+        }
+
+
+        .result-group
+        {
+            display:        flex;
+            flex-direction: column;
+            gap:            10px;
+        }
+
+
+        .report
+        {
+            display:        flex;
+            flex-direction: column;
+            gap:            8px;
+            border-radius:  6px;
+            border:         1px solid rgba(52, 152, 219, 0.5);
+            background:     rgba(52, 152, 219, 0.06);
+            padding:        10px;
+            font-size:      0.82rem;
+            line-height:    1.45;
+        }
+
+
+        .report-headline
+        {
+            font-size:   0.9rem;
+            font-weight: 600;
+        }
+
+
+        .report-step
+        {
+            border-left:  2px solid rgba(52, 152, 219, 0.6);
+            padding-left: 8px;
+        }
+
+
+        .report-step-title
+        {
+            font-weight:   600;
+            margin-bottom: 2px;
+        }
+
+
+        .report-line
+        {
+            color: #d1ccc2;
+        }
+
+
+        .report-note.is-warning
+        {
+            color: #f39c12;
+        }
+
+
+        .report-note.is-info
+        {
+            color: #8d887e;
         }
 
 
