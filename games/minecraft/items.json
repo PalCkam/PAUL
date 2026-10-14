@@ -1,290 +1,42 @@
 [
-    {
-        "id": "raw_iron",
-        "name": "Raw Iron",
-        "tags": [
-            "smeltable"
-        ]
-    },
-    {
-        "id": "raw_copper",
-        "name": "Raw Copper",
-        "tags": [
-            "smeltable"
-        ]
-    },
-    {
-        "id": "raw_gold",
-        "name": "Raw Gold",
-        "tags": [
-            "smeltable"
-        ]
-    },
-    {
-        "id": "ancient_debris",
-        "name": "Ancient Debris",
-        "tags": [
-            "smeltable"
-        ]
-    },
-    {
-        "id": "sand",
-        "name": "Sand",
-        "tags": [
-            "smeltable"
-        ]
-    },
-    {
-        "id": "clay_ball",
-        "name": "Clay Ball",
-        "tags": [
-            "smeltable"
-        ]
-    },
-    {
-        "id": "netherrack",
-        "name": "Netherrack",
-        "tags": [
-            "smeltable"
-        ]
-    },
-    {
-        "id": "cactus",
-        "name": "Cactus",
-        "tags": [
-            "smeltable"
-        ]
-    },
-    {
-        "id": "kelp",
-        "name": "Kelp",
-        "tags": [
-            "smeltable"
-        ]
-    },
-    {
-        "id": "potato",
-        "name": "Potato",
-        "tags": [
-            "smeltable"
-        ]
-    },
-    {
-        "id": "raw_beef",
-        "name": "Raw Beef",
-        "tags": [
-            "smeltable"
-        ]
-    },
-    {
-        "id": "raw_porkchop",
-        "name": "Raw Porkchop",
-        "tags": [
-            "smeltable"
-        ]
-    },
-    {
-        "id": "raw_chicken",
-        "name": "Raw Chicken",
-        "tags": [
-            "smeltable"
-        ]
-    },
-    {
-        "id": "raw_mutton",
-        "name": "Raw Mutton",
-        "tags": [
-            "smeltable"
-        ]
-    },
-    {
-        "id": "raw_rabbit",
-        "name": "Raw Rabbit",
-        "tags": [
-            "smeltable"
-        ]
-    },
-    {
-        "id": "raw_cod",
-        "name": "Raw Cod",
-        "tags": [
-            "smeltable"
-        ]
-    },
-    {
-        "id": "raw_salmon",
-        "name": "Raw Salmon",
-        "tags": [
-            "smeltable"
-        ]
-    },
-    {
-        "id": "coal",
-        "name": "Coal",
-        "tags": [
-            "fuel"
-        ]
-    },
-    {
-        "id": "charcoal",
-        "name": "Charcoal",
-        "tags": [
-            "fuel"
-        ]
-    },
-    {
-        "id": "coal_block",
-        "name": "Block of Coal",
-        "tags": [
-            "fuel"
-        ]
-    },
-    {
-        "id": "lava_bucket",
-        "name": "Lava Bucket",
-        "tags": [
-            "fuel"
-        ]
-    },
-    {
-        "id": "blaze_rod",
-        "name": "Blaze Rod",
-        "tags": [
-            "fuel"
-        ]
-    },
-    {
-        "id": "dried_kelp_block",
-        "name": "Dried Kelp Block",
-        "tags": [
-            "fuel"
-        ]
-    },
-    {
-        "id": "stick",
-        "name": "Stick",
-        "tags": [
-            "fuel"
-        ]
-    },
-    {
-        "id": "oak_log",
-        "name": "Oak Log",
-        "tags": [
-            "smeltable",
-            "fuel"
-        ]
-    },
-    {
-        "id": "spruce_log",
-        "name": "Spruce Log",
-        "tags": [
-            "smeltable",
-            "fuel"
-        ]
-    },
-    {
-        "id": "birch_log",
-        "name": "Birch Log",
-        "tags": [
-            "smeltable",
-            "fuel"
-        ]
-    },
-    {
-        "id": "jungle_log",
-        "name": "Jungle Log",
-        "tags": [
-            "smeltable",
-            "fuel"
-        ]
-    },
-    {
-        "id": "acacia_log",
-        "name": "Acacia Log",
-        "tags": [
-            "smeltable",
-            "fuel"
-        ]
-    },
-    {
-        "id": "dark_oak_log",
-        "name": "Dark Oak Log",
-        "tags": [
-            "smeltable",
-            "fuel"
-        ]
-    },
-    {
-        "id": "mangrove_log",
-        "name": "Mangrove Log",
-        "tags": [
-            "smeltable",
-            "fuel"
-        ]
-    },
-    {
-        "id": "cherry_log",
-        "name": "Cherry Log",
-        "tags": [
-            "smeltable",
-            "fuel"
-        ]
-    },
-    {
-        "id": "oak_planks",
-        "name": "Oak Planks",
-        "tags": [
-            "fuel"
-        ]
-    },
-    {
-        "id": "spruce_planks",
-        "name": "Spruce Planks",
-        "tags": [
-            "fuel"
-        ]
-    },
-    {
-        "id": "birch_planks",
-        "name": "Birch Planks",
-        "tags": [
-            "fuel"
-        ]
-    },
-    {
-        "id": "jungle_planks",
-        "name": "Jungle Planks",
-        "tags": [
-            "fuel"
-        ]
-    },
-    {
-        "id": "acacia_planks",
-        "name": "Acacia Planks",
-        "tags": [
-            "fuel"
-        ]
-    },
-    {
-        "id": "dark_oak_planks",
-        "name": "Dark Oak Planks",
-        "tags": [
-            "fuel"
-        ]
-    },
-    {
-        "id": "mangrove_planks",
-        "name": "Mangrove Planks",
-        "tags": [
-            "fuel"
-        ]
-    },
-    {
-        "id": "cherry_planks",
-        "name": "Cherry Planks",
-        "tags": [
-            "fuel"
-        ]
-    }
+    {"id": "raw_iron", "name": "Raw Iron", "tags": ["smeltable", "blastable"]},
+    {"id": "raw_copper", "name": "Raw Copper", "tags": ["smeltable", "blastable"]},
+    {"id": "raw_gold", "name": "Raw Gold", "tags": ["smeltable", "blastable"]},
+    {"id": "ancient_debris", "name": "Ancient Debris", "tags": ["smeltable", "blastable"]},
+    {"id": "sand", "name": "Sand", "tags": ["smeltable"]},
+    {"id": "clay_ball", "name": "Clay Ball", "tags": ["smeltable"]},
+    {"id": "netherrack", "name": "Netherrack", "tags": ["smeltable"]},
+    {"id": "cactus", "name": "Cactus", "tags": ["smeltable"]},
+    {"id": "kelp", "name": "Kelp", "tags": ["smeltable"]},
+    {"id": "potato", "name": "Potato", "tags": ["smeltable", "smokable"]},
+    {"id": "raw_beef", "name": "Raw Beef", "tags": ["smeltable", "smokable"]},
+    {"id": "raw_porkchop", "name": "Raw Porkchop", "tags": ["smeltable", "smokable"]},
+    {"id": "raw_chicken", "name": "Raw Chicken", "tags": ["smeltable", "smokable"]},
+    {"id": "raw_mutton", "name": "Raw Mutton", "tags": ["smeltable", "smokable"]},
+    {"id": "raw_rabbit", "name": "Raw Rabbit", "tags": ["smeltable", "smokable"]},
+    {"id": "raw_cod", "name": "Raw Cod", "tags": ["smeltable", "smokable"]},
+    {"id": "raw_salmon", "name": "Raw Salmon", "tags": ["smeltable", "smokable"]},
+    {"id": "coal", "name": "Coal", "tags": ["fuel"], "burnSeconds": 80},
+    {"id": "charcoal", "name": "Charcoal", "tags": ["fuel"], "burnSeconds": 80},
+    {"id": "coal_block", "name": "Block of Coal", "tags": ["fuel"], "burnSeconds": 800},
+    {"id": "lava_bucket", "name": "Lava Bucket", "tags": ["fuel"], "stackSize": 1, "burnSeconds": 1000},
+    {"id": "blaze_rod", "name": "Blaze Rod", "tags": ["fuel"], "burnSeconds": 120},
+    {"id": "dried_kelp_block", "name": "Dried Kelp Block", "tags": ["fuel"], "burnSeconds": 200},
+    {"id": "stick", "name": "Stick", "tags": ["fuel"], "burnSeconds": 5},
+    {"id": "oak_log", "name": "Oak Log", "tags": ["smeltable", "fuel"], "burnSeconds": 15},
+    {"id": "spruce_log", "name": "Spruce Log", "tags": ["smeltable", "fuel"], "burnSeconds": 15},
+    {"id": "birch_log", "name": "Birch Log", "tags": ["smeltable", "fuel"], "burnSeconds": 15},
+    {"id": "jungle_log", "name": "Jungle Log", "tags": ["smeltable", "fuel"], "burnSeconds": 15},
+    {"id": "acacia_log", "name": "Acacia Log", "tags": ["smeltable", "fuel"], "burnSeconds": 15},
+    {"id": "dark_oak_log", "name": "Dark Oak Log", "tags": ["smeltable", "fuel"], "burnSeconds": 15},
+    {"id": "mangrove_log", "name": "Mangrove Log", "tags": ["smeltable", "fuel"], "burnSeconds": 15},
+    {"id": "cherry_log", "name": "Cherry Log", "tags": ["smeltable", "fuel"], "burnSeconds": 15},
+    {"id": "oak_planks", "name": "Oak Planks", "tags": ["fuel"], "burnSeconds": 15},
+    {"id": "spruce_planks", "name": "Spruce Planks", "tags": ["fuel"], "burnSeconds": 15},
+    {"id": "birch_planks", "name": "Birch Planks", "tags": ["fuel"], "burnSeconds": 15},
+    {"id": "jungle_planks", "name": "Jungle Planks", "tags": ["fuel"], "burnSeconds": 15},
+    {"id": "acacia_planks", "name": "Acacia Planks", "tags": ["fuel"], "burnSeconds": 15},
+    {"id": "dark_oak_planks", "name": "Dark Oak Planks", "tags": ["fuel"], "burnSeconds": 15},
+    {"id": "mangrove_planks", "name": "Mangrove Planks", "tags": ["fuel"], "burnSeconds": 15},
+    {"id": "cherry_planks", "name": "Cherry Planks", "tags": ["fuel"], "burnSeconds": 15}
 ]
