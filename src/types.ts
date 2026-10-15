@@ -83,10 +83,15 @@ export type ShortcutPanelId = "notes" | "tasks" | "shortcuts";
 
 
 
+export type ShortcutToolId = "capture";
+
+
+
 export type ShortcutAction =
     | { type: "preset"; presetId: string }
     | { type: "note";   noteId: string }
-    | { type: "panel";  panelId: ShortcutPanelId };
+    | { type: "panel";  panelId: ShortcutPanelId }
+    | { type: "tool";   toolId: ShortcutToolId };
 
 
 
@@ -101,6 +106,13 @@ export type Binding =
 export type ShortcutsFileData =
 {
     bindingsByProfile: Record<string, Binding[]>;
+};
+
+
+
+export type SettingsFileData =
+{
+    captureWindowKey: string | null;
 };
 
 

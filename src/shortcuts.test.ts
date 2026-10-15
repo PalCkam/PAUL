@@ -22,7 +22,8 @@ describe("actions des raccourcis", () =>
         for (const action of [
             { type: "preset" as const, presetId: "preset_abc" },
             { type: "note" as const, noteId: "note_1" },
-            { type: "panel" as const, panelId: "tasks" as const }
+            { type: "panel" as const, panelId: "tasks" as const },
+            { type: "tool" as const, toolId: "capture" as const }
         ])
         {
             assert.deepEqual(parseActionValue(actionToValue(action)), action);
@@ -31,7 +32,7 @@ describe("actions des raccourcis", () =>
 
     it("refuse une valeur inconnue ou incomplète", () =>
     {
-        for (const value of ["", "preset", "preset:", "panel:inconnu", "autre:x", 5, null, undefined])
+        for (const value of ["", "preset", "preset:", "panel:inconnu", "tool:inconnu", "autre:x", 5, null, undefined])
         {
             assert.equal(parseActionValue(value), null, String(value));
         }

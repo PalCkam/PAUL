@@ -1,11 +1,18 @@
 import { isRecord } from "./utils";
-import type { Binding, GameProfile, ShortcutAction, ShortcutOption, ShortcutPanelId } from "./types";
+import type { Binding, GameProfile, ShortcutAction, ShortcutOption, ShortcutPanelId, ShortcutToolId } from "./types";
 
 
 
 export const SHORTCUT_KEYS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
 export const SHORTCUT_PANELS: ShortcutPanelId[] = ["notes", "tasks", "shortcuts"];
+
+export const SHORTCUT_TOOLS: ShortcutToolId[] = ["capture"];
+
+export const TOOL_OPTIONS: ShortcutOption[] =
+[
+    { value: "tool:capture", label: "Outil : capturer l'écran du jeu (calibration)" }
+];
 
 export const PANEL_OPTIONS: ShortcutOption[] =
 [
@@ -32,6 +39,7 @@ export function actionToValue(action: ShortcutAction): string
         case "preset": return `preset:${action.presetId}`;
         case "note":   return `note:${action.noteId}`;
         case "panel":  return `panel:${action.panelId}`;
+        case "tool":   return `tool:${action.toolId}`;
     }
 }
 
@@ -68,6 +76,11 @@ export function parseActionValue(value: unknown): ShortcutAction | null
         return { type, panelId: target as ShortcutPanelId };
     }
 
+    if (type === "tool" && SHORTCUT_TOOLS.includes(target as ShortcutToolId))
+    {
+        return { type, toolId: target as ShortcutToolId };
+    }
+
     return null;
 }
 
@@ -85,6 +98,7 @@ export function parseBinding(raw: unknown): Binding | null
     const value = type === "preset" ? `preset:${String(raw.action.presetId ?? "")}`
         : type === "note" ? `note:${String(raw.action.noteId ?? "")}`
         : type === "panel" ? `panel:${String(raw.action.panelId ?? "")}`
+        : type === "tool" ? `tool:${String(raw.action.toolId ?? "")}`
         : "";
 
     const action = parseActionValue(value);

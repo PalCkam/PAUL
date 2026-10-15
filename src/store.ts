@@ -5,7 +5,7 @@ import path      from "node:path";
 import type { ParameterValues } from "./tasks/types";
 import { parseBinding } from "./shortcuts";
 import type { LegacyPresetKey } from "./shortcuts";
-import type { Binding, GameProfile, LaunchEntry, Note, NotesFileData, Preset, PresetsFileData, ProfilesFileData, ShortcutsFileData, UsageData } from "./types";
+import type { Binding, GameProfile, LaunchEntry, Note, NotesFileData, Preset, PresetsFileData, ProfilesFileData, SettingsFileData, ShortcutsFileData, UsageData } from "./types";
 import { isNonEmptyString, isRecord } from "./utils";
 
 
@@ -41,6 +41,13 @@ function getPresetsFilePath(): string
 function getShortcutsFilePath(): string
 {
     return path.join(getDataDirectoryPath(), "shortcuts.json");
+}
+
+
+
+function getSettingsFilePath(): string
+{
+    return path.join(getDataDirectoryPath(), "settings.json");
 }
 
 
@@ -304,6 +311,27 @@ export async function readShortcutsFile(): Promise<ShortcutsFileData>
 export function writeShortcutsFile(data: ShortcutsFileData): Promise<void>
 {
     return writeJsonAtomic(getShortcutsFilePath(), data);
+}
+
+
+
+export async function readSettingsFile(): Promise<SettingsFileData>
+{
+    const parsed = await readJson(getSettingsFilePath());
+
+    if (!isRecord(parsed))
+    {
+        return { captureWindowKey: null };
+    }
+
+    return { captureWindowKey: isNonEmptyString(parsed.captureWindowKey) ? parsed.captureWindowKey : null };
+}
+
+
+
+export function writeSettingsFile(data: SettingsFileData): Promise<void>
+{
+    return writeJsonAtomic(getSettingsFilePath(), data);
 }
 
 

@@ -6,7 +6,7 @@
   "scripts": {
     "build:ts": "tsc",
     "start": "npm run build:ts && electron .",
-    "test": "npm run build:ts && node --test dist/tasks/tasks.test.js dist/profiles.test.js dist/presets.test.js dist/shortcuts.test.js dist/games/minecraft/fill-furnaces.test.js",
+    "test": "npm run build:ts && node --test dist/tasks/tasks.test.js dist/profiles.test.js dist/presets.test.js dist/shortcuts.test.js dist/vision/vision.test.js dist/vision/report.test.js dist/vision/game-window.test.js dist/games/minecraft/fill-furnaces.test.js",
     "pack:win": "npm run build:ts && electron-packager . PAUL --platform=win32 --arch=x64 --out=release-pack --overwrite --prune=true --ignore=\"release|release-pack\""
   },
   "repository": {

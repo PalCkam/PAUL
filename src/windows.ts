@@ -34,7 +34,7 @@ const PANEL_LAYOUTS: Record<PanelId, (area: Electron.Rectangle) => Electron.Rect
     shortcuts: (area) =>
     {
         const width  = 460;
-        const height = Math.min(680, area.height - 80);
+        const height = Math.min(940, area.height - 80);
 
         return {
             x:      Math.round(area.x + (area.width - width) / 2),

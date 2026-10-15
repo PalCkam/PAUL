@@ -1,5 +1,6 @@
-import { app, globalShortcut, ipcMain } from "electron";
+import { app, globalShortcut, ipcMain, shell } from "electron";
 import { randomUUID } from "node:crypto";
+import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import { GAME_MODULES } from "./modules";
@@ -10,20 +11,27 @@ import
     readNotesFile,
     readPresetsFile,
     readProfilesFile,
+    readSettingsFile,
     readShortcutsFile,
     readUsageFile,
     writeNotesFile,
     writePresetsFile,
     writeProfilesFile,
+    writeSettingsFile,
     writeShortcutsFile,
     writeUsageFile
 } from "./store";
 import { linkLegacyProfiles } from "./profiles";
+import { annotateDetection } from "./vision/annotate";
+import { captureGameFrame, getCapturesDirectory, listOpenWindows, saveCapture } from "./vision/capture";
+import { detectGui } from "./vision/gui-detect";
+import { cardToLines, describeCapture } from "./vision/report";
 import { parsePresetName, toOverlayCard, upsertPreset } from "./presets";
 import
 {
     PANEL_OPTIONS,
     SHORTCUT_KEYS,
+    TOOL_OPTIONS,
     actionToValue,
     bindingsFromLegacyKeys,
     parseActionValue,
@@ -62,6 +70,7 @@ import
     minimizeLauncher,
     sendToOverlay,
     setDockVisible,
+    showPanel,
     togglePanel
 } from "./windows";
 import type { PanelId } from "./windows";
@@ -372,9 +381,63 @@ async function togglePinnedNote(noteId: string): Promise<boolean>
 
 
 
+type CaptureOutcome =
+    | { ok: true;  lines: string[]; directory: string }
+    | { ok: false; message: string };
+
+
+
+async function runCapture(fromPanel: boolean): Promise<CaptureOutcome>
+{
+    if (fromPanel)
+    {
+        hidePanel();
+
+        await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+
+    const settings = await readSettingsFile();
+    const captured = await captureGameFrame(settings.captureWindowKey);
+
+    if (!captured.ok)
+    {
+        showMessageCard("Capture du jeu", captured.message);
+
+        return { ok: false, message: captured.message };
+    }
+
+    const detection = detectGui(captured.frame.image);
+    const saved     = await saveCapture(captured.frame, annotateDetection(captured.frame.image, detection));
+
+    const card = describeCapture(
+        {
+            sourceName:       captured.frame.sourceName,
+            sourceKind:       captured.frame.sourceKind,
+            width:            captured.frame.image.width,
+            height:           captured.frame.image.height,
+            fileName:         saved.fileName,
+            analysisFileName: saved.analysisFileName,
+            blank:            captured.frame.blank,
+            notice:           captured.frame.notice
+        },
+        detection
+    );
+
+    showOverlayCard(card);
+
+    if (fromPanel)
+    {
+        showPanel("shortcuts");
+    }
+
+    return { ok: true, lines: cardToLines(card), directory: saved.directory };
+}
+
+
+
 async function actionExists(action: ShortcutAction): Promise<boolean>
 {
-    if (action.type === "panel")
+    if (action.type === "panel" || action.type === "tool")
     {
         return true;
     }
@@ -398,6 +461,12 @@ async function executeAction(action: ShortcutAction): Promise<void>
     if (action.type === "panel")
     {
         togglePanel(action.panelId);
+        return;
+    }
+
+    if (action.type === "tool")
+    {
+        await runCapture(false);
         return;
     }
 
@@ -942,6 +1011,49 @@ ipcMain.handle("overlay:getTaskReport", () =>
 
 
 
+ipcMain.handle("vision:capture", () =>
+{
+    return runCapture(true);
+});
+
+
+
+ipcMain.handle("vision:listWindows", async () =>
+{
+    const settings = await readSettingsFile();
+
+    return { windows: await listOpenWindows(), selected: settings.captureWindowKey };
+});
+
+
+
+ipcMain.handle("vision:selectWindow", async (_event, key: unknown) =>
+{
+    if (key !== null && !isNonEmptyString(key))
+    {
+        return { ok: false };
+    }
+
+    await writeSettingsFile({ captureWindowKey: key });
+
+    return { ok: true };
+});
+
+
+
+ipcMain.handle("vision:openFolder", async () =>
+{
+    const directory = getCapturesDirectory();
+
+    await mkdir(directory, { recursive: true });
+
+    const error = await shell.openPath(directory);
+
+    return { ok: error === "", directory, message: error };
+});
+
+
+
 ipcMain.handle("presets:list", async () =>
 {
     return { presets: await getCurrentPresets() };
@@ -1034,7 +1146,8 @@ ipcMain.handle("shortcuts:context", async () =>
             value: actionToValue({ type: "note", noteId: note.id }),
             label: `Épingler / désépingler : ${note.title.trim() || "Sans titre"}`
         })),
-        ...PANEL_OPTIONS
+        ...PANEL_OPTIONS,
+        ...TOOL_OPTIONS
     ];
 
     const slots = SHORTCUT_KEYS.map((key: number) =>
