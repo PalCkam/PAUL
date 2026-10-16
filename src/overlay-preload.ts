@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from "electron";
 
-import type { OverlayCard, PinnedNoteView } from "./types";
+import type { OverlayCard, PinnedNoteView } from "./app-types";
 
 
 

@@ -10,5 +10,11 @@
     "skipLibCheck": true,
     "sourceMap": true
   },
-  "include": ["src"]
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "src/types.ts",
+    "src/tasks/types.ts"
+  ]
 }

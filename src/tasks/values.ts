@@ -11,7 +11,7 @@ import type
     ResolveResult,
     TaskDefinition,
     TaskParameter
-} from "./types";
+} from "./task-types";
 
 
 

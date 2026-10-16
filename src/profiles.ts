@@ -1,4 +1,4 @@
-import type { GameProfile } from "./types";
+import type { GameProfile } from "./app-types";
 
 
 

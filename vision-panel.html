@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'self'">
+    <title>PAUL Lecture</title>
+
+    <style>
+        html,
+        body
+        {
+            margin:      0;
+            padding:     0;
+            width:       100%;
+            height:      100%;
+            font-family: Inter, system-ui, sans-serif;
+            color:       #f1efe9;
+            overflow:    hidden;
+        }
+
+
+        html
+        {
+            background: transparent;
+        }
+
+
+        body
+        {
+            box-sizing:    border-box;
+            background:    rgba(12, 12, 12, 0.95);
+            border:        1px solid rgba(127, 127, 127, 0.4);
+            border-radius: 12px;
+        }
+
+
+        .panel-root
+        {
+            display:        flex;
+            flex-direction: column;
+            padding:        16px;
+            gap:            14px;
+            height:         100%;
+            box-sizing:     border-box;
+            overflow-y:     auto;
+        }
+
+
+        .panel-top
+        {
+            display:         flex;
+            justify-content: space-between;
+            align-items:     flex-start;
+            gap:             8px;
+        }
+
+
+        .panel-header
+        {
+            font-size:      0.9rem;
+            font-weight:    600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color:          #b8b4ab;
+        }
+
+
+        .panel-profile
+        {
+            margin-top: 2px;
+            font-size:  0.8rem;
+            color:      #8d887e;
+        }
+
+
+        .panel-empty,
+        .panel-hint
+        {
+            font-size:   0.82rem;
+            line-height: 1.4;
+            color:       #8d887e;
+        }
+
+
+        .slot-key
+        {
+            font-size:   0.85rem;
+            font-weight: 600;
+        }
+
+
+        .tool-section
+        {
+            display:        flex;
+            flex-direction: column;
+            gap:            8px;
+            border-top:     1px solid rgba(127, 127, 127, 0.25);
+            padding-top:    14px;
+        }
+
+
+        .window-row
+        {
+            display:        flex;
+            flex-direction: column;
+            gap:            4px;
+        }
+
+
+        .window-hint
+        {
+            font-size: 0.75rem;
+            color:     #8d887e;
+        }
+
+
+        .learn-section
+        {
+            display:        flex;
+            flex-direction: column;
+            gap:            8px;
+            border-top:     1px solid rgba(127, 127, 127, 0.25);
+            padding-top:    14px;
+        }
+
+
+        .scan-results
+        {
+            display:        flex;
+            flex-direction: column;
+            gap:            8px;
+        }
+
+
+        .scan-card
+        {
+            display:       flex;
+            gap:           10px;
+            align-items:   flex-start;
+            border-radius: 6px;
+            border:        1px solid rgba(127, 127, 127, 0.35);
+            background:    rgba(24, 24, 24, 1);
+            padding:       8px;
+        }
+
+
+        .scan-card.is-known
+        {
+            border-color: rgba(46, 204, 113, 0.6);
+            align-items:  center;
+        }
+
+
+        .scan-thumb
+        {
+            flex-shrink:     0;
+            width:           80px;
+            height:          80px;
+            image-rendering: pixelated;
+            background:      #8b8b8b;
+            border:          1px solid rgba(255, 255, 255, 0.35);
+        }
+
+
+        .scan-info
+        {
+            display:        flex;
+            flex-direction: column;
+            gap:            6px;
+            flex:           1;
+            min-width:      0;
+            font-size:      0.8rem;
+            line-height:    1.4;
+            color:          #d1ccc2;
+        }
+
+
+        .scan-info .scan-total
+        {
+            font-weight: 600;
+            color:       #f1efe9;
+        }
+
+
+        .learned-list
+        {
+            display:   flex;
+            flex-wrap: wrap;
+            gap:       4px;
+        }
+
+
+        .learned-chip
+        {
+            border-radius: 12px;
+            background:    rgba(52, 152, 219, 0.35);
+            padding:       3px 10px;
+            font-size:     0.75rem;
+        }
+
+
+        .tool-buttons
+        {
+            display: flex;
+            gap:     6px;
+        }
+
+
+        .capture-result
+        {
+            display:        flex;
+            flex-direction: column;
+            gap:            3px;
+            font-size:      0.8rem;
+            line-height:    1.4;
+            color:          #d1ccc2;
+        }
+
+
+        .capture-result .capture-headline
+        {
+            font-size:   0.9rem;
+            font-weight: 600;
+            color:       #f1efe9;
+        }
+
+
+        .capture-result .capture-warning
+        {
+            color: #f39c12;
+        }
+
+
+        button:disabled
+        {
+            opacity: 0.5;
+            cursor:  default;
+        }
+
+
+        .is-hidden
+        {
+            display: none !important;
+        }
+
+
+        .dropdown
+        {
+            display:        flex;
+            flex-direction: column;
+            gap:            4px;
+        }
+
+
+        .dropdown-toggle
+        {
+            width:         100%;
+            box-sizing:    border-box;
+            text-align:    left;
+            border:        1px solid rgba(127, 127, 127, 0.35);
+            background:    rgba(24, 24, 24, 1);
+            padding:       6px 8px;
+            font-size:     0.85rem;
+        }
+
+
+        .dropdown-list
+        {
+            display:        flex;
+            flex-direction: column;
+            gap:            2px;
+            max-height:     200px;
+            overflow-y:     auto;
+            border-radius:  4px;
+            border:         1px solid rgba(127, 127, 127, 0.25);
+            padding:        4px;
+        }
+
+
+        .dropdown-option
+        {
+            text-align:  left;
+            background:  transparent;
+            padding:     5px 6px;
+            font-size:   0.8rem;
+            color:       #d1ccc2;
+        }
+
+
+        .dropdown-option.is-selected
+        {
+            background: rgba(52, 152, 219, 0.25);
+            color:      #f1efe9;
+        }
+
+
+        button
+        {
+            border-radius: 4px;
+            border:        none;
+            padding:       6px 10px;
+            font-family:   inherit;
+            font-size:     0.8rem;
+            cursor:        pointer;
+            background:    #3498db;
+            color:         #f1efe9;
+        }
+
+
+        button.secondary
+        {
+            background: rgba(127, 127, 127, 0.3);
+        }
+
+
+        button.secondary:hover:not(:disabled)
+        {
+            background: rgba(127, 127, 127, 0.5);
+        }
+
+
+        .dropdown-toggle:hover:not(:disabled),
+        .dropdown-option:hover:not(:disabled)
+        {
+            background: rgba(52, 152, 219, 0.2);
+        }
+    </style>
+</head>
+
+
+<body>
+    <div class="panel-root">
+        <div class="panel-top">
+            <div>
+                <div class="panel-header">PAUL · Lecture du jeu</div>
+                <div id="contextLabel" class="panel-profile"></div>
+            </div>
+
+            <button id="closeButton" class="secondary" type="button" aria-label="Fermer le panneau">✕</button>
+        </div>
+
+        <div class="tool-section">
+            <div class="slot-key">1 · Capturer le jeu</div>
+
+            <div class="panel-hint">
+                Ouvre ton inventaire (E) ou un four dans Minecraft, puis capture : PAUL enregistre l'image et te montre ce qu'il lit.
+                Ce panneau se ferme le temps de la capture. Une touche du pavé peut aussi la lancer (onglet Raccourcis).
+            </div>
+
+            <div class="window-row">
+                <div class="slot-key">Fenêtre à capturer</div>
+                <div class="window-hint">Si PAUL capture la mauvaise fenêtre, choisis ici celle de ton jeu.</div>
+                <div id="windowPicker"></div>
+                <button id="refreshWindows" class="secondary" type="button">Actualiser la liste</button>
+            </div>
+
+            <div class="tool-buttons">
+                <button id="captureButton" type="button">Capturer l'écran du jeu</button>
+                <button id="folderButton" class="secondary" type="button">Dossier des captures</button>
+            </div>
+
+            <div id="captureResult" class="capture-result"></div>
+        </div>
+
+        <div class="learn-section">
+            <div class="slot-key">2 · Apprendre mes items</div>
+
+            <div class="panel-hint">
+                Ouvre ton inventaire dans le jeu, puis clique sur « Détecter mes items ». PAUL te montre l'image de chaque item
+                qu'il ne connaît pas : choisis son nom, puis enregistre. Une seule capture suffit pour tout apprendre.
+            </div>
+
+            <button id="scanButton" type="button">Détecter mes items</button>
+
+            <div id="scanMessage" class="capture-result"></div>
+
+            <div id="scanResults" class="scan-results"></div>
+
+            <button id="saveLearnedButton" type="button" class="is-hidden">Enregistrer ces items</button>
+
+            <div id="learnSummary" class="capture-result"></div>
+
+            <div class="slot-key">Déjà appris</div>
+            <div id="learnedList" class="learned-list"></div>
+        </div>
+    </div>
+
+    <script src="./dropdown.js"></script>
+    <script src="./vision-panel.js"></script>
+</body>
+</html>

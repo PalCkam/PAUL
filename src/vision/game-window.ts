@@ -98,7 +98,7 @@ export function pickGameWindow(candidates: WindowCandidate[], preferredKey: stri
 
     return {
         window: null,
-        notice: `Fenêtre du jeu non reconnue, tout l'écran a été capturé. Fenêtres ouvertes : ${names.join(" · ")}. Choisis la bonne dans l'onglet Raccourcis.`
+        notice: `Fenêtre du jeu non reconnue, tout l'écran a été capturé. Fenêtres ouvertes : ${names.join(" · ")}. Choisis la bonne dans le panneau Lecture du jeu.`
     };
 }
 

@@ -112,70 +112,6 @@
         }
 
 
-        .tool-section
-        {
-            display:        flex;
-            flex-direction: column;
-            gap:            8px;
-            border-top:     1px solid rgba(127, 127, 127, 0.25);
-            padding-top:    14px;
-        }
-
-
-        .window-row
-        {
-            display:        flex;
-            flex-direction: column;
-            gap:            4px;
-        }
-
-
-        .window-hint
-        {
-            font-size: 0.75rem;
-            color:     #8d887e;
-        }
-
-
-        .tool-buttons
-        {
-            display: flex;
-            gap:     6px;
-        }
-
-
-        .capture-result
-        {
-            display:        flex;
-            flex-direction: column;
-            gap:            3px;
-            font-size:      0.8rem;
-            line-height:    1.4;
-            color:          #d1ccc2;
-        }
-
-
-        .capture-result .capture-headline
-        {
-            font-size:   0.9rem;
-            font-weight: 600;
-            color:       #f1efe9;
-        }
-
-
-        .capture-result .capture-warning
-        {
-            color: #f39c12;
-        }
-
-
-        button:disabled
-        {
-            opacity: 0.5;
-            cursor:  default;
-        }
-
-
         .is-hidden
         {
             display: none !important;
@@ -282,32 +218,15 @@
             Elles ne sont actives que lorsque la barre F4 est affichée, et propres à ce profil. Pavé 0 : fermer la carte affichée dans le jeu.
         </div>
 
+        <div class="panel-hint">
+            La capture du jeu et l'apprentissage de tes items se trouvent dans le panneau <b>Lecture</b> (icône en forme d'œil, dans la barre F4).
+        </div>
+
+        <button id="openVisionButton" class="secondary" type="button">Ouvrir le panneau Lecture</button>
+
         <div id="slotList" class="slot-list"></div>
 
         <div id="message" class="panel-message"></div>
-
-        <div class="tool-section">
-            <div class="slot-key">Calibration</div>
-
-            <div class="panel-hint">
-                Ouvre ton inventaire (E) ou un four dans Minecraft, puis capture : PAUL enregistre l'image et te montre ce qu'il reconnaît.
-                Ce panneau se ferme le temps de la capture. Une touche du pavé peut aussi la lancer (« Outil : capturer l'écran du jeu »).
-            </div>
-
-            <div class="window-row">
-                <div class="slot-key">Fenêtre à capturer</div>
-                <div class="window-hint">Si PAUL capture la mauvaise fenêtre, choisis ici celle de ton jeu.</div>
-                <div id="windowPicker"></div>
-                <button id="refreshWindows" class="secondary" type="button">Actualiser la liste</button>
-            </div>
-
-            <div class="tool-buttons">
-                <button id="captureButton" type="button">Capturer l'écran du jeu</button>
-                <button id="folderButton" class="secondary" type="button">Dossier des captures</button>
-            </div>
-
-            <div id="captureResult" class="capture-result"></div>
-        </div>
     </div>
 
     <script src="./dropdown.js"></script>

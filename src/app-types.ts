@@ -1,4 +1,4 @@
-import type { ParameterValues, ReportNote } from "./tasks/types";
+import type { ParameterValues, ReportNote } from "./tasks/task-types";
 
 
 
@@ -79,7 +79,7 @@ export type Preset =
 
 
 
-export type ShortcutPanelId = "notes" | "tasks" | "shortcuts";
+export type ShortcutPanelId = "notes" | "tasks" | "shortcuts" | "vision";
 
 
 
@@ -106,6 +106,13 @@ export type Binding =
 export type ShortcutsFileData =
 {
     bindingsByProfile: Record<string, Binding[]>;
+};
+
+
+
+export type IconsFileData =
+{
+    iconsByGame: Record<string, Record<string, number[]>>;
 };
 
 

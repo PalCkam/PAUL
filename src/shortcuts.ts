@@ -1,11 +1,11 @@
 import { isRecord } from "./utils";
-import type { Binding, GameProfile, ShortcutAction, ShortcutOption, ShortcutPanelId, ShortcutToolId } from "./types";
+import type { Binding, GameProfile, ShortcutAction, ShortcutOption, ShortcutPanelId, ShortcutToolId } from "./app-types";
 
 
 
 export const SHORTCUT_KEYS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
-export const SHORTCUT_PANELS: ShortcutPanelId[] = ["notes", "tasks", "shortcuts"];
+export const SHORTCUT_PANELS: ShortcutPanelId[] = ["notes", "tasks", "shortcuts", "vision"];
 
 export const SHORTCUT_TOOLS: ShortcutToolId[] = ["capture"];
 
@@ -18,7 +18,8 @@ export const PANEL_OPTIONS: ShortcutOption[] =
 [
     { value: "panel:notes",     label: "Ouvrir : Notes" },
     { value: "panel:tasks",     label: "Ouvrir : Tâches" },
-    { value: "panel:shortcuts", label: "Ouvrir : Raccourcis" }
+    { value: "panel:shortcuts", label: "Ouvrir : Raccourcis" },
+    { value: "panel:vision",    label: "Ouvrir : Lecture du jeu" }
 ];
 
 

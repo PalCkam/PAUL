@@ -1,12 +1,21 @@
-import type { ItemDefinition, ParameterValues, SimulationReport, SimulationScenario } from "../tasks/types";
+import type { ItemDefinition, ParameterValues, SimulationReport, SimulationScenario } from "../tasks/task-types";
 import { fillFurnaces } from "./minecraft/fill-furnaces";
+
+
+
+export type LiveInventory =
+{
+    inventory:  Record<string, number>;
+    freeSlots:  number;
+    capturedAt: string;
+};
 
 
 
 export type TaskImplementation =
 {
     scenarios: SimulationScenario[];
-    simulate(values: ParameterValues, scenarioId: string, items: ItemDefinition[]): SimulationReport;
+    simulate(values: ParameterValues, scenarioId: string, items: ItemDefinition[], live: LiveInventory | null): SimulationReport;
 };
 
 

@@ -1,8 +1,9 @@
 import fs   from "node:fs/promises";
 import path from "node:path";
 
+import { parseDigitTemplates } from "../vision/digits";
 import { findMissingCapabilities, parseGameManifest, parseItems, parseTaskDefinition } from "./schema";
-import type { GameDefinition, GameManifest, ItemDefinition, LoadResult, TaskDefinition } from "./types";
+import type { GameDefinition, GameManifest, ItemDefinition, LoadResult, TaskDefinition } from "./task-types";
 
 
 
@@ -79,6 +80,40 @@ async function loadItems(gamesDirectory: string, folderName: string, errors: str
     {
         errors.push(...parsed.errors.map((message: string) => `${displayPath} : ${message}`));
         return [];
+    }
+
+    return parsed.value;
+}
+
+
+
+async function loadDigits(gamesDirectory: string, folderName: string, errors: string[]): Promise<Record<string, string[]> | null>
+{
+    const filePath    = path.join(gamesDirectory, folderName, "digits.json");
+    const displayPath = `${folderName}/digits.json`;
+
+    try
+    {
+        await fs.access(filePath);
+    }
+    catch
+    {
+        return null;
+    }
+
+    const raw = await readJsonFile(filePath, displayPath, errors);
+
+    if (raw === null)
+    {
+        return null;
+    }
+
+    const parsed = parseDigitTemplates(raw);
+
+    if (!parsed.value)
+    {
+        errors.push(...parsed.errors.map((message: string) => `${displayPath} : ${message}`));
+        return null;
     }
 
     return parsed.value;
@@ -168,9 +203,10 @@ async function loadGame(gamesDirectory: string, folderName: string, errors: stri
         tasks.push(task);
     }
 
-    const items = await loadItems(gamesDirectory, folderName, errors);
+    const items  = await loadItems(gamesDirectory, folderName, errors);
+    const digits = await loadDigits(gamesDirectory, folderName, errors);
 
-    return { ...parsed.value, items, tasks };
+    return { ...parsed.value, items, digits, tasks };
 }
 
 

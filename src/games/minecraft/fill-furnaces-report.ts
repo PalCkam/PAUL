@@ -1,4 +1,4 @@
-import type { ItemDefinition, ReportNote, SimulationReport, SimulationStep } from "../../tasks/types";
+import type { ItemDefinition, ReportNote, SimulationReport, SimulationStep } from "../../tasks/task-types";
 import type { FurnacePlan, ItemStack, PlanAssignment, PlanRound } from "./furnace-types";
 import { createItemNamer } from "./item-names";
 

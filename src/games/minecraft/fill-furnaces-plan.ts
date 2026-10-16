@@ -1,4 +1,4 @@
-import type { ItemDefinition, ParameterValues } from "../../tasks/types";
+import type { ItemDefinition, ParameterValues } from "../../tasks/task-types";
 import { isRecord } from "../../utils";
 import { ACCEPTED_TAG, COOK_SECONDS, FURNACE_LABELS } from "./furnace-types";
 import type

@@ -8,7 +8,7 @@ import type
     ParseResult,
     TaskDefinition,
     TaskParameter
-} from "./types";
+} from "./task-types";
 
 
 

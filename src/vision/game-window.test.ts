@@ -48,7 +48,7 @@ describe("choix de la fenêtre du jeu", () =>
 
         assert.equal(choice.window, null);
         assert.match(choice.notice ?? "", /Fenêtres ouvertes : Minecraft · Mumble · Discord/);
-        assert.match(choice.notice ?? "", /onglet Raccourcis/);
+        assert.match(choice.notice ?? "", /panneau Lecture du jeu/);
     });
 
     it("le dit clairement quand aucune fenêtre n'est trouvée", () =>

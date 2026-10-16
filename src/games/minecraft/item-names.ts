@@ -1,4 +1,4 @@
-import type { ItemDefinition } from "../../tasks/types";
+import type { ItemDefinition } from "../../tasks/task-types";
 
 
 

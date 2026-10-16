@@ -4,7 +4,7 @@ import path             from "node:path";
 import { describe, it } from "node:test";
 
 import { parseItems }       from "../../tasks/schema";
-import type { ItemDefinition, ParameterValues } from "../../tasks/types";
+import type { ItemDefinition, ParameterValues } from "../../tasks/task-types";
 import { FAKE_SCENARIOS }   from "./fake-environments";
 import { planFillFurnaces } from "./fill-furnaces-plan";
 import { describeFurnacePlan, formatDuration } from "./fill-furnaces-report";

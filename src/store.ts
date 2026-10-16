@@ -2,10 +2,10 @@ import { app } from "electron";
 import fs        from "node:fs/promises";
 import path      from "node:path";
 
-import type { ParameterValues } from "./tasks/types";
+import type { ParameterValues } from "./tasks/task-types";
 import { parseBinding } from "./shortcuts";
 import type { LegacyPresetKey } from "./shortcuts";
-import type { Binding, GameProfile, LaunchEntry, Note, NotesFileData, Preset, PresetsFileData, ProfilesFileData, SettingsFileData, ShortcutsFileData, UsageData } from "./types";
+import type { Binding, GameProfile, IconsFileData, LaunchEntry, Note, NotesFileData, Preset, PresetsFileData, ProfilesFileData, SettingsFileData, ShortcutsFileData, UsageData } from "./app-types";
 import { isNonEmptyString, isRecord } from "./utils";
 
 
@@ -41,6 +41,13 @@ function getPresetsFilePath(): string
 function getShortcutsFilePath(): string
 {
     return path.join(getDataDirectoryPath(), "shortcuts.json");
+}
+
+
+
+function getIconsFilePath(): string
+{
+    return path.join(getDataDirectoryPath(), "icons.json");
 }
 
 
@@ -311,6 +318,51 @@ export async function readShortcutsFile(): Promise<ShortcutsFileData>
 export function writeShortcutsFile(data: ShortcutsFileData): Promise<void>
 {
     return writeJsonAtomic(getShortcutsFilePath(), data);
+}
+
+
+
+function isIconTemplate(value: unknown): value is number[]
+{
+    return Array.isArray(value)
+        && value.length === 16 * 16 * 3
+        && value.every((entry: unknown) => typeof entry === "number" && Number.isInteger(entry) && entry >= 0 && entry <= 255);
+}
+
+
+
+export async function readIconsFile(): Promise<IconsFileData>
+{
+    const parsed = await readJson(getIconsFilePath());
+
+    if (!isRecord(parsed) || !isRecord(parsed.iconsByGame))
+    {
+        return { iconsByGame: {} };
+    }
+
+    const iconsByGame: Record<string, Record<string, number[]>> = {};
+
+    for (const [gameId, icons] of Object.entries(parsed.iconsByGame))
+    {
+        iconsByGame[gameId] = {};
+
+        for (const [itemId, template] of Object.entries(isRecord(icons) ? icons : {}))
+        {
+            if (isIconTemplate(template))
+            {
+                iconsByGame[gameId][itemId] = template;
+            }
+        }
+    }
+
+    return { iconsByGame };
+}
+
+
+
+export function writeIconsFile(data: IconsFileData): Promise<void>
+{
+    return writeJsonAtomic(getIconsFilePath(), data);
 }
 
 

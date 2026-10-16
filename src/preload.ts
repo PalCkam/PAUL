@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from "electron";
 
-import type { LaunchPayload } from "./types";
+import type { LaunchPayload } from "./app-types";
 
 
 

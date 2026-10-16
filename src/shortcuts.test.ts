@@ -2,7 +2,7 @@ import assert           from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { actionToValue, bindingsFromLegacyKeys, parseActionValue, parseBinding, setBinding } from "./shortcuts";
-import type { Binding } from "./types";
+import type { Binding } from "./app-types";
 
 
 
@@ -23,6 +23,7 @@ describe("actions des raccourcis", () =>
             { type: "preset" as const, presetId: "preset_abc" },
             { type: "note" as const, noteId: "note_1" },
             { type: "panel" as const, panelId: "tasks" as const },
+            { type: "panel" as const, panelId: "vision" as const },
             { type: "tool" as const, toolId: "capture" as const }
         ])
         {

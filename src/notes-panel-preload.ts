@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from "electron";
 
-import type { NoteChanges } from "./types";
+import type { NoteChanges } from "./app-types";
 
 
 

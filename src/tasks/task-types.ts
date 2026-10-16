@@ -142,6 +142,7 @@ export type GameDefinition =
     name:         string;
     capabilities: CapabilityDefinition[];
     items:        ItemDefinition[];
+    digits:       Record<string, string[]> | null;
     tasks:        TaskDefinition[];
 };
 

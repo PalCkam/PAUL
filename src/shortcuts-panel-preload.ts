@@ -14,24 +14,9 @@ contextBridge.exposeInMainWorld("shortcutsPanelApi",
         return ipcRenderer.invoke("shortcuts:set", key, value);
     },
 
-    captureGame()
+    openPanel(panelId: string)
     {
-        return ipcRenderer.invoke("vision:capture");
-    },
-
-    listCaptureWindows()
-    {
-        return ipcRenderer.invoke("vision:listWindows");
-    },
-
-    selectCaptureWindow(key: string | null)
-    {
-        return ipcRenderer.invoke("vision:selectWindow", key);
-    },
-
-    openCapturesFolder()
-    {
-        return ipcRenderer.invoke("vision:openFolder");
+        return ipcRenderer.invoke("panel:open", panelId);
     },
 
     close()

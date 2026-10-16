@@ -4,14 +4,7 @@ const contextLabelEl = document.getElementById("contextLabel");
 const slotListEl     = document.getElementById("slotList");
 const messageEl      = document.getElementById("message");
 const closeButton    = document.getElementById("closeButton");
-const captureButton  = document.getElementById("captureButton");
-const folderButton   = document.getElementById("folderButton");
-const captureResult  = document.getElementById("captureResult");
-const windowPicker   = document.getElementById("windowPicker");
-const refreshButton  = document.getElementById("refreshWindows");
-
-const AUTO_WINDOW = "";
-
+const openVision     = document.getElementById("openVisionButton");
 const FREE_VALUE = "";
 
 
@@ -76,77 +69,9 @@ async function loadContext()
 }
 
 
-async function loadWindows()
+openVision.addEventListener("click", () =>
 {
-    const info    = await api.listCaptureWindows();
-    const options = [{ value: AUTO_WINDOW, label: "Automatique (Minecraft, Lunar Client…)" }];
-
-    for (const window of info.windows)
-    {
-        options.push({ value: window.key, label: window.name });
-    }
-
-    if (info.selected !== null && !info.windows.some((window) => window.key === info.selected))
-    {
-        options.push({ value: info.selected, label: `${info.selected} (fermée)` });
-    }
-
-    windowPicker.replaceChildren(createDropdown(options, info.selected === null ? AUTO_WINDOW : info.selected, async (value) =>
-    {
-        await api.selectCaptureWindow(value === AUTO_WINDOW ? null : value);
-    }));
-}
-
-
-function showCaptureLines(lines, isError)
-{
-    captureResult.replaceChildren(...lines.map((line, position) =>
-    {
-        const isWarning = isError || /^(Aucun|La barre|L'image|Fenêtre|La fenêtre)/.test(line);
-        const className = isWarning ? "capture-warning" : (position === 0 ? "capture-headline" : "");
-
-        return createElement("div", className, line);
-    }));
-}
-
-
-captureButton.addEventListener("click", async () =>
-{
-    captureButton.disabled = true;
-
-    showCaptureLines(["Capture en cours…"], false);
-
-    try
-    {
-        const result = await api.captureGame();
-
-        showCaptureLines(result.ok ? result.lines : [result.message], !result.ok);
-
-        loadWindows();
-
-        if (typeof captureResult.scrollIntoView === "function")
-        {
-            captureResult.scrollIntoView({ block: "nearest" });
-        }
-    }
-    finally
-    {
-        captureButton.disabled = false;
-    }
-});
-
-
-refreshButton.addEventListener("click", loadWindows);
-
-
-folderButton.addEventListener("click", async () =>
-{
-    const result = await api.openCapturesFolder();
-
-    if (!result.ok)
-    {
-        showCaptureLines([`Impossible d'ouvrir le dossier : ${result.directory}`], true);
-    }
+    api.openPanel("vision");
 });
 
 
@@ -160,8 +85,6 @@ api.onRefresh(() =>
 {
     messageEl.textContent = "";
     loadContext();
-    loadWindows();
 });
 
 loadContext();
-loadWindows();

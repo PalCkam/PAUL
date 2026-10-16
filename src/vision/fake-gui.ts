@@ -1,4 +1,5 @@
-import type { RawImage } from "./vision-types";
+import type { DigitTemplates } from "./digits";
+import type { RawImage, SlotRect } from "./vision-types";
 
 
 
@@ -53,6 +54,59 @@ function fillRect(image: RawImage, x: number, y: number, width: number, height: 
             image.data[offset + 1] = color[1];
             image.data[offset + 2] = color[2];
             image.data[offset + 3] = 255;
+        }
+    }
+}
+
+
+
+export function drawStackCount(image: RawImage, slot: SlotRect, scale: number, text: string, templates: DigitTemplates): void
+{
+    for (let index = 0; index < text.length; index += 1)
+    {
+        const position = text.length - 1 - index;
+        const template = templates[text[index]];
+        const left     = slot.x + (11 - 6 * position) * scale;
+        const top      = slot.y + 9 * scale;
+
+        for (let row = 0; row < 7; row += 1)
+        {
+            for (let column = 0; column < 5; column += 1)
+            {
+                if (template[row][column] === "#")
+                {
+                    fillRect(image, Math.round(left + (column + 1) * scale), Math.round(top + (row + 1) * scale), Math.round(scale), Math.round(scale), [63, 63, 63]);
+                }
+            }
+        }
+
+        for (let row = 0; row < 7; row += 1)
+        {
+            for (let column = 0; column < 5; column += 1)
+            {
+                if (template[row][column] === "#")
+                {
+                    fillRect(image, Math.round(left + column * scale), Math.round(top + row * scale), Math.round(scale), Math.round(scale), [255, 255, 255]);
+                }
+            }
+        }
+    }
+}
+
+
+
+export function drawIcon(image: RawImage, slot: SlotRect, scale: number, pattern: string[], palette: Record<string, [number, number, number]>): void
+{
+    for (let row = 0; row < pattern.length; row += 1)
+    {
+        for (let column = 0; column < pattern[row].length; column += 1)
+        {
+            const color = palette[pattern[row][column]];
+
+            if (color)
+            {
+                fillRect(image, Math.round(slot.x + column * scale), Math.round(slot.y + row * scale), Math.round(scale), Math.round(scale), color);
+            }
         }
     }
 }

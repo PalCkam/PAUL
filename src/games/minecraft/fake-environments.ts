@@ -18,7 +18,7 @@ function stack(itemId: string, count: number): ItemStack
 
 
 
-function furnaceLine(types: FurnaceType[], overrides: Record<string, Partial<FurnaceState>> = {}): FurnaceState[]
+export function furnaceLine(types: FurnaceType[], overrides: Record<string, Partial<FurnaceState>> = {}): FurnaceState[]
 {
     return types.map((type: FurnaceType, position: number) =>
     {

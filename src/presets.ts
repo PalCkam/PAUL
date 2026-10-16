@@ -1,5 +1,5 @@
-import type { ParameterError, ParameterValues, ReportNote, SimulationReport } from "./tasks/types";
-import type { OverlayCard, Preset } from "./types";
+import type { ParameterError, ParameterValues, ReportNote, SimulationReport } from "./tasks/task-types";
+import type { OverlayCard, Preset } from "./app-types";
 
 
 

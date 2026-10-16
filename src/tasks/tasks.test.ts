@@ -6,7 +6,7 @@ import { after, describe, it } from "node:test";
 
 import { loadGames }                          from "./loader";
 import { parseGameManifest, parseItems, parseTaskDefinition } from "./schema";
-import type { ItemCatalog, TaskDefinition }   from "./types";
+import type { ItemCatalog, TaskDefinition }   from "./task-types";
 import { createItemCatalog, resolveParameterValues } from "./values";
 
 

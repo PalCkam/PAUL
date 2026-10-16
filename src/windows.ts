@@ -13,14 +13,16 @@ const KEEP_ON_TOP_INTERVAL_MS = 2000;
 
 
 
-export type PanelId = "notes" | "tasks" | "shortcuts";
+export type PanelId = "notes" | "tasks" | "shortcuts" | "vision";
 
 const PANEL_FILES: Record<PanelId, { html: string; preload: string }> =
 {
     notes: { html: "notes-panel.html", preload: "notes-panel-preload.js" },
     tasks: { html: "tasks-panel.html", preload: "tasks-panel-preload.js" },
 
-    shortcuts: { html: "shortcuts-panel.html", preload: "shortcuts-panel-preload.js" }
+    shortcuts: { html: "shortcuts-panel.html", preload: "shortcuts-panel-preload.js" },
+
+    vision: { html: "vision-panel.html", preload: "vision-panel-preload.js" }
 };
 
 const PANEL_IDS = Object.keys(PANEL_FILES) as PanelId[];
@@ -34,15 +36,17 @@ const PANEL_LAYOUTS: Record<PanelId, (area: Electron.Rectangle) => Electron.Rect
     shortcuts: (area) =>
     {
         const width  = 460;
-        const height = Math.min(940, area.height - 80);
+        const height = Math.min(780, area.height - 80);
 
         return {
-            x:      Math.round(area.x + (area.width - width) / 2),
+            x:      Math.max(area.x, Math.round(area.x + area.width - 420 - 20 - width)),
             y:      Math.round(area.y + (area.height - height) / 2),
             width,
             height
         };
-    }
+    },
+
+    vision: (area) => ({ x: area.x + 340 + 20, y: area.y, width: 480, height: area.height })
 };
 
 

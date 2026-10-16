@@ -7,6 +7,7 @@ import { GAME_MODULES } from "./modules";
 import
 {
     migrateLegacyProfiles,
+    readIconsFile,
     readLegacyPresetKeys,
     readNotesFile,
     readPresetsFile,
@@ -14,6 +15,7 @@ import
     readSettingsFile,
     readShortcutsFile,
     readUsageFile,
+    writeIconsFile,
     writeNotesFile,
     writePresetsFile,
     writeProfilesFile,
@@ -25,7 +27,9 @@ import { linkLegacyProfiles } from "./profiles";
 import { annotateDetection } from "./vision/annotate";
 import { captureGameFrame, getCapturesDirectory, listOpenWindows, saveCapture } from "./vision/capture";
 import { detectGui } from "./vision/gui-detect";
-import { cardToLines, describeCapture } from "./vision/report";
+import { cardToLines, describeCapture, inventoryLines } from "./vision/report";
+import type { InventoryContext } from "./vision/report";
+import type { GuiDetection, RawImage } from "./vision/vision-types";
 import { parsePresetName, toOverlayCard, upsertPreset } from "./presets";
 import
 {
@@ -38,9 +42,13 @@ import
     setBinding
 } from "./shortcuts";
 import { loadGames } from "./tasks/loader";
-import type { LoadResult } from "./tasks/types";
+import type { LoadResult } from "./tasks/task-types";
 import { createItemCatalog, resolveParameterValues } from "./tasks/values";
 import { getTaskImplementation } from "./games/registry";
+import type { LiveInventory } from "./games/registry";
+import { scanIcons } from "./vision/clusters";
+import type { IconCluster } from "./vision/clusters";
+import { readInventory } from "./vision/inventory-reader";
 import type
 {
     Binding,
@@ -54,7 +62,7 @@ import type
     ShortcutAction,
     ShortcutOption,
     UsageData
-} from "./types";
+} from "./app-types";
 import { createLock, isNonEmptyString, isRecord } from "./utils";
 import
 {
@@ -90,6 +98,8 @@ let loadedGames:        LoadResult    = { games: [], errors: [] };
 
 let lastOverlayCard:        OverlayCard | null = null;
 let registeredShortcutKeys: number[]           = [];
+let lastInventory:          LiveInventory | null = null;
+let pendingScan:            PendingScan | null   = null;
 
 const lastScenarioByTask = new Map<string, string>();
 
@@ -102,6 +112,7 @@ const lastScenarioByTask = new Map<string, string>();
 const withNotesLock   = createLock();
 const withPresetsLock = createLock();
 const withShortcutsLock = createLock();
+const withIconsLock     = createLock();
 
 
 
@@ -354,7 +365,7 @@ async function runPreset(preset: Preset): Promise<void>
     }
 
     const scenarioId = lastScenarioByTask.get(`${game.id}/${task.id}`) ?? "";
-    const report     = implementation.simulate(resolved.values, scenarioId, game.items);
+    const report     = implementation.simulate(resolved.values, scenarioId, game.items, lastInventory);
 
     showOverlayCard(toOverlayCard(`${preset.name} · simulation`, report));
 }
@@ -387,50 +398,289 @@ type CaptureOutcome =
 
 
 
-async function runCapture(fromPanel: boolean): Promise<CaptureOutcome>
+type Prepared =
+    | { ok: true;  frame: Extract<Awaited<ReturnType<typeof captureGameFrame>>, { ok: true }>["frame"]; detection: ReturnType<typeof detectGui> }
+    | { ok: false; message: string };
+
+
+
+async function captureAndDetect(): Promise<Prepared>
 {
-    if (fromPanel)
-    {
-        hidePanel();
-
-        await new Promise((resolve) => setTimeout(resolve, 250));
-    }
-
     const settings = await readSettingsFile();
     const captured = await captureGameFrame(settings.captureWindowKey);
 
     if (!captured.ok)
     {
-        showMessageCard("Capture du jeu", captured.message);
-
         return { ok: false, message: captured.message };
     }
 
-    const detection = detectGui(captured.frame.image);
-    const saved     = await saveCapture(captured.frame, annotateDetection(captured.frame.image, detection));
+    return { ok: true, frame: captured.frame, detection: detectGui(captured.frame.image) };
+}
 
-    const card = describeCapture(
-        {
-            sourceName:       captured.frame.sourceName,
-            sourceKind:       captured.frame.sourceKind,
-            width:            captured.frame.image.width,
-            height:           captured.frame.image.height,
-            fileName:         saved.fileName,
-            analysisFileName: saved.analysisFileName,
-            blank:            captured.frame.blank,
-            notice:           captured.frame.notice
-        },
-        detection
-    );
 
-    showOverlayCard(card);
 
-    if (fromPanel)
+async function withPanelsHidden<T>(fromPanel: boolean, task: () => Promise<T>): Promise<T>
+{
+    if (!fromPanel)
     {
-        showPanel("shortcuts");
+        return task();
     }
 
-    return { ok: true, lines: cardToLines(card), directory: saved.directory };
+    hidePanel();
+
+    await new Promise((resolve) => setTimeout(resolve, 250));
+
+    try
+    {
+        return await task();
+    }
+    finally
+    {
+        showPanel("vision");
+    }
+}
+
+
+
+async function getIconTemplates(gameId: string): Promise<Map<string, number[]>>
+{
+    const data = await readIconsFile();
+
+    return new Map(Object.entries(data.iconsByGame[gameId] ?? {}));
+}
+
+
+
+function describeLearned(game: { items: { id: string; name: string }[] }, templates: Map<string, number[]>): { id: string; name: string }[]
+{
+    return game.items.filter((item) => templates.has(item.id)).map((item) => ({ id: item.id, name: item.name }));
+}
+
+
+
+async function runCapture(fromPanel: boolean): Promise<CaptureOutcome>
+{
+    return withPanelsHidden(fromPanel, async () =>
+    {
+        const prepared = await captureAndDetect();
+
+        if (!prepared.ok)
+        {
+            showMessageCard("Capture du jeu", prepared.message);
+
+            return { ok: false as const, message: prepared.message };
+        }
+
+        const { frame, detection } = prepared;
+        const saved = await saveCapture(frame, annotateDetection(frame.image, detection));
+        const game  = getCurrentGame();
+
+        let inventory: InventoryContext | undefined;
+
+        if (detection.found && game)
+        {
+            const known    = await getIconTemplates(game.id);
+            const reading  = readInventory(frame.image, detection, game.digits, known);
+            const names    = new Map(game.items.map((item) => [item.id, item.name]));
+
+            inventory =
+            {
+                reading,
+                nameOf:        (itemId: string) => names.get(itemId) ?? itemId,
+                learnedCount:  known.size,
+                hasDigits:     game.digits !== null,
+                missingDigits: ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"].filter((digit: string) => !(game.digits ?? {})[digit])
+            };
+
+            lastInventory = { inventory: reading.totals, freeSlots: reading.freeSlots, capturedAt: new Date().toISOString() };
+        }
+
+        const card = describeCapture(
+            {
+                sourceName:       frame.sourceName,
+                sourceKind:       frame.sourceKind,
+                width:            frame.image.width,
+                height:           frame.image.height,
+                fileName:         saved.fileName,
+                analysisFileName: saved.analysisFileName,
+                blank:            frame.blank,
+                notice:           frame.notice
+            },
+            detection,
+            inventory
+        );
+
+        showOverlayCard(card);
+
+        return { ok: true as const, lines: cardToLines(card), directory: saved.directory };
+    });
+}
+
+
+
+type PendingScan =
+{
+    gameId:    string;
+    image:     RawImage;
+    detection: GuiDetection;
+    clusters:  IconCluster[];
+};
+
+
+
+type ScanPayload =
+{
+    clusters: { key: string; cells: number[]; slots: string[]; total: number | null }[];
+    known:    { id: string; name: string; slots: string[]; total: number | null }[];
+    items:    { id: string; name: string }[];
+};
+
+
+
+type ScanOutcome =
+    | ({ ok: true } & ScanPayload)
+    | { ok: false; message: string };
+
+
+
+type SaveOutcome =
+    | ({ ok: true; message: string; learned: { id: string; name: string }[]; lines: string[] } & ScanPayload)
+    | { ok: false; message: string };
+
+
+
+function buildScanPayload(game: { items: { id: string; name: string }[] }, scan: ReturnType<typeof scanIcons>): ScanPayload
+{
+    const names = new Map(game.items.map((item) => [item.id, item.name]));
+
+    return {
+        clusters: scan.unknown.map((cluster) => ({ key: cluster.key, cells: cluster.cells, slots: cluster.slots, total: cluster.total })),
+        known:    scan.known.map((group) => ({ id: group.itemId, name: names.get(group.itemId) ?? group.itemId, slots: group.slots, total: group.total })),
+        items:    game.items.map((item) => ({ id: item.id, name: item.name }))
+    };
+}
+
+
+
+async function runScan(): Promise<ScanOutcome>
+{
+    const game = getCurrentGame();
+
+    if (!game)
+    {
+        return { ok: false, message: "Sélectionne d'abord un profil rattaché à un jeu." };
+    }
+
+    return withPanelsHidden(true, async () =>
+    {
+        const prepared = await captureAndDetect();
+
+        if (!prepared.ok)
+        {
+            return { ok: false as const, message: prepared.message };
+        }
+
+        if (!prepared.detection.found)
+        {
+            return { ok: false as const, message: "Aucun inventaire reconnu : ouvre ton inventaire dans le jeu, puis recommence." };
+        }
+
+        const templates = await getIconTemplates(game.id);
+        const scan      = scanIcons(prepared.frame.image, prepared.detection, game.digits, templates);
+
+        pendingScan = { gameId: game.id, image: prepared.frame.image, detection: prepared.detection, clusters: scan.unknown };
+
+        return { ok: true as const, ...buildScanPayload(game, scan) };
+    });
+}
+
+
+
+function describeNames(names: string[]): string
+{
+    return names.length <= 1 ? names.join("") : `${names.slice(0, -1).join(", ")} et ${names[names.length - 1]}`;
+}
+
+
+
+async function runSaveLearned(assignments: unknown): Promise<SaveOutcome>
+{
+    const game = getCurrentGame();
+
+    if (!game || !pendingScan || pendingScan.gameId !== game.id)
+    {
+        return { ok: false, message: "Lance d'abord « Détecter mes items »." };
+    }
+
+    const scan = pendingScan;
+
+    const valid = Array.isArray(assignments) && assignments.every((entry: unknown) =>
+    {
+        return isRecord(entry) && typeof entry.key === "string" && typeof entry.itemId === "string";
+    });
+
+    if (!valid || (assignments as unknown[]).length === 0)
+    {
+        return { ok: false, message: "Choisis le nom d'au moins un item." };
+    }
+
+    const chosen = assignments as { key: string; itemId: string }[];
+
+    for (const entry of chosen)
+    {
+        if (!scan.clusters.some((cluster) => cluster.key === entry.key) || !game.items.some((item) => item.id === entry.itemId))
+        {
+            return { ok: false, message: "Ces choix ne correspondent plus à la dernière détection : relance « Détecter mes items »." };
+        }
+    }
+
+    const names = new Map(game.items.map((item) => [item.id, item.name]));
+    const used  = chosen.map((entry) => entry.itemId);
+    const twice = used.filter((itemId: string, position: number) => used.indexOf(itemId) !== position);
+
+    if (twice.length > 0)
+    {
+        return { ok: false, message: `Deux groupes ont reçu le même nom : ${[...new Set(twice)].map((itemId: string) => names.get(itemId)).join(", ")}. Vérifie tes choix.` };
+    }
+
+    await withIconsLock(async () =>
+    {
+        const data  = await readIconsFile();
+        const icons = { ...(data.iconsByGame[game.id] ?? {}) };
+
+        for (const entry of chosen)
+        {
+            icons[entry.itemId] = (scan.clusters.find((cluster) => cluster.key === entry.key) as IconCluster).cells;
+        }
+
+        data.iconsByGame[game.id] = icons;
+
+        await writeIconsFile(data);
+    });
+
+    const templates = await getIconTemplates(game.id);
+    const rescanned = scanIcons(scan.image, scan.detection, game.digits, templates);
+    const reading   = readInventory(scan.image, scan.detection, game.digits, templates);
+
+    pendingScan   = { gameId: game.id, image: scan.image, detection: scan.detection, clusters: rescanned.unknown };
+    lastInventory = { inventory: reading.totals, freeSlots: reading.freeSlots, capturedAt: new Date().toISOString() };
+
+    const inventory: InventoryContext =
+    {
+        reading,
+        nameOf:        (itemId: string) => names.get(itemId) ?? itemId,
+        learnedCount:  templates.size,
+        hasDigits:     game.digits !== null,
+        missingDigits: ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"].filter((digit: string) => !(game.digits ?? {})[digit])
+    };
+
+    return {
+        ok:      true,
+        message: `${describeNames(chosen.map((entry) => names.get(entry.itemId) as string))} : appris.`,
+        learned: describeLearned(game, templates),
+        lines:   inventoryLines(inventory),
+        ...buildScanPayload(game, rescanned)
+    };
 }
 
 
@@ -825,6 +1075,25 @@ ipcMain.handle("dock:openModule", (_event, moduleId: unknown) =>
 
 
 
+ipcMain.handle("panel:open", (_event, panelId: unknown) =>
+{
+    const known = GAME_MODULES.some((module) => module.id === panelId);
+
+    if (!known)
+    {
+        return { ok: false };
+    }
+
+    if (!isPanelVisible(panelId as PanelId))
+    {
+        showPanel(panelId as PanelId);
+    }
+
+    return { ok: true };
+});
+
+
+
 ipcMain.handle("panel:close", (event) =>
 {
     closePanelOf(event.sender);
@@ -1014,6 +1283,66 @@ ipcMain.handle("overlay:getTaskReport", () =>
 ipcMain.handle("vision:capture", () =>
 {
     return runCapture(true);
+});
+
+
+
+ipcMain.handle("vision:learnContext", async () =>
+{
+    const game = getCurrentGame();
+
+    if (!game)
+    {
+        return { game: null, items: [], learned: [] };
+    }
+
+    const templates = await getIconTemplates(game.id);
+
+    return {
+        game:    { id: game.id, name: game.name },
+        items:   game.items.map((item) => ({ id: item.id, name: item.name })),
+        learned: describeLearned(game, templates)
+    };
+});
+
+
+
+ipcMain.handle("vision:scanItems", () =>
+{
+    return runScan();
+});
+
+
+
+ipcMain.handle("vision:saveLearned", (_event, assignments: unknown) =>
+{
+    return runSaveLearned(assignments);
+});
+
+
+
+ipcMain.handle("vision:forgetItem", async (_event, itemId: unknown) =>
+{
+    const game = getCurrentGame();
+
+    if (!game || !isNonEmptyString(itemId))
+    {
+        return { ok: false, learned: [] };
+    }
+
+    await withIconsLock(async () =>
+    {
+        const data = await readIconsFile();
+        const icons = { ...(data.iconsByGame[game.id] ?? {}) };
+
+        delete icons[itemId];
+
+        data.iconsByGame[game.id] = icons;
+
+        await writeIconsFile(data);
+    });
+
+    return { ok: true, learned: describeLearned(game, await getIconTemplates(game.id)) };
 });
 
 
@@ -1264,7 +1593,7 @@ ipcMain.handle("tasks:simulate", (_event, taskId: unknown, values: unknown, scen
     const implementation = getTaskImplementation(game.id, task.id);
 
     const report = implementation
-        ? implementation.simulate(resolved.values, typeof scenarioId === "string" ? scenarioId : "", game.items)
+        ? implementation.simulate(resolved.values, typeof scenarioId === "string" ? scenarioId : "", game.items, lastInventory)
         : null;
 
     return { ok: true, values: resolved.values, report };
